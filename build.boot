@@ -9,7 +9,7 @@
 
                           [org.clojure/clojure "1.9.0-alpha13" :scope "provided"]
                           [provisdom/utility-belt "0.1.1"]
-                          [provisdom/math "0.2.1-SNAPSHOT"]
+                          [provisdom/math "0.3.0-SNAPSHOT"]
                           [clj-time "0.12.0"]
                           [com.taoensso/truss "1.3.6"]])
 
