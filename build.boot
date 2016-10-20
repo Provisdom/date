@@ -4,7 +4,9 @@
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
           :dependencies '[[provisdom/boot-tasks "0.7.0" :scope "test"]
+                          [provisdom/test "0.2.1" :scope "test"]
                           [adzerk/boot-test "1.1.2" :scope "test"]
+
                           [org.clojure/clojure "1.9.0-alpha13" :scope "provided"]
                           [provisdom/utility-belt "0.1.1"]
                           [provisdom/math "0.2.1-SNAPSHOT"]
