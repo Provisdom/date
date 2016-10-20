@@ -1,0 +1,6 @@
+image: provisdom/docker-clojure:0.1.3
+
+deploy:
+  stage: deploy
+  script:
+    - boot push-jar
