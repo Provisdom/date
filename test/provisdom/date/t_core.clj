@@ -2,7 +2,7 @@
   (:require
     [clojure.test :refer :all]
     [provisdom.test.core :refer :all]
-    [provisdom.math.date :refer :all]
+    [provisdom.date.core :refer :all]
     [provisdom.math.core :as m]))
 
 (deftest t-leap-year?
