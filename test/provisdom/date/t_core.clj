@@ -1,6 +1,8 @@
 (ns provisdom.date.t-core
   (:require
     [clojure.test :refer :all]
+    [clojure.spec :as s]
+    [clojure.spec.test :as st]
     [provisdom.test.core :refer :all]
     [provisdom.date.core :refer :all]
     [provisdom.math.core :as m]))
@@ -330,7 +332,7 @@
     (read-duration (to-duration (as-ticks 13) (date 2014) true) [:da])))
 
 (deftest t-time-zone-for-current-environment
-  (is (int? (environment-time-zone))))
+  (is (s/valid? (s/int-in -12 15) (environment-time-zone))))
 
 (deftest t-lazy-period
   (is=
