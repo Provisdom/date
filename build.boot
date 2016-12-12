@@ -1,5 +1,5 @@
 (def project 'provisdom/date)
-(def version "0.1.0-SNAPSHOT")
+(def version "1.0-alpha1")
 
 (set-env! :resource-paths #{"src"}
           :source-paths #{"test"}
@@ -9,7 +9,7 @@
                           [org.clojure/test.check "0.9.0" :scope "test"]
                           [criterium "0.4.4" :scope "test"]
 
-                          [org.clojure/clojure "1.9.0-alpha13" :scope "provided"]
+                          [org.clojure/clojure "1.9.0-alpha14" :scope "provided"]
                           [provisdom/utility-belt "0.1.1"]
                           [provisdom/math "0.3.0-SNAPSHOT"]
                           [clj-time "0.12.0"]
