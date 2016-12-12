@@ -1,10 +1,8 @@
 (ns provisdom.date.specs
   (:require [clojure.spec :as s]))
 
-(def min-year 1814)
-(def max-year 2325)
-(s/def ::date (s/int-in -3610189440000000000 -902522649600000000)) ;; TODO use min-year/max-year
-(s/def ::year (s/int-in min-year max-year))
+(s/def ::date int?)
+(s/def ::year (s/int-in 1814 2325))
 (s/def ::month (s/int-in 1 12))
 (s/def ::day-number (s/int-in 1 31))
 (s/def ::years int?)
@@ -19,7 +17,7 @@
 (s/def ::us int?)
 (s/def ::ticks int?)
 (s/def ::duration (s/tuple ::months ::ticks))
-(s/def ::period (s/int-in 0 (- -902522649600000000 -3610189440000000000)))
+(s/def ::period number?)
 (s/def ::interval (s/and (s/cat :start ::date :end ::date) (fn [{:keys [start end]}] (< start end))))
 (s/def ::days-per-month (s/int-in 28 31))
 
