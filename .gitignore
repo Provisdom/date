@@ -10,10 +10,7 @@ pom.xml.asc
 .nrepl-history
 .hgignore
 .hg/
-*.impl
-.idea
-.envrc
-project.clj
+/.idea
 *.iml
-.nrepl-history
-.nrepl-port
+project.clj
+.cpcache

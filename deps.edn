@@ -1,0 +1,19 @@
+{:paths   ["src"]
+ :deps    {org.clojure/core.async {:mvn/version "1.1.587"}
+           orchestra              {:mvn/version "2019.02.06-1"}
+           clojure.java-time      {:mvn/version "0.3.2"}
+           provisdom/math         {:git/url "https://github.com/Provisdom/math.git"
+                                   :sha     "bce9e695b8dc8b741c1ef10ef4521cd138e10653"}
+           provisdom/utility-belt {:git/url "https://github.com/Provisdom/utility-belt.git"
+                                   :sha     "aa1092372d282f7e360955afc0513cdaf8e20af3"}}
+ :aliases {:test        {:extra-paths ["test"]
+                         :extra-deps  {org.clojure/test.check    {:mvn/version "0.10.0-alpha3"}
+                                       provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
+                                                                  :sha     "52b5b0b0f01b4b284ee81dd6673b4c01f1d78f9c"}
+                                       com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                                  :sha     "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
+                         :main-opts   ["-m" "cognitect.test-runner"
+                                       "-n" "provisdom.utility-belt.core-test"]}
+           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "0.0-529"}
+                                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0-70"}}
+                         :main-opts  ["-m" "kaocha.runner"]}}}

@@ -26,5 +26,5 @@
        :scm         {:url "https://github.com/yourname/date"}
        :license     {"Eclipse Public License"
                      "http://www.eclipse.org/legal/epl-v10.html"}}
-  jar {:main 'provisdom.date.core
+  jar {:main 'provisdom.date.tick
        :file (str "date-" version "-standalone.jar")})
