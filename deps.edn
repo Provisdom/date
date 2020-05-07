@@ -1,6 +1,5 @@
 {:paths   ["src"]
- :deps    {org.clojure/core.async {:mvn/version "1.1.587"}
-           orchestra              {:mvn/version "2019.02.06-1"}
+ :deps    {orchestra              {:mvn/version "2019.02.06-1"}
            clojure.java-time      {:mvn/version "0.3.2"}
            provisdom/math         {:git/url "https://github.com/Provisdom/math.git"
                                    :sha     "bce9e695b8dc8b741c1ef10ef4521cd138e10653"}
