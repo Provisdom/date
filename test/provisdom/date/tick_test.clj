@@ -122,9 +122,9 @@
           ::tick/months 7})))
 
 ;;;DATE
-(deftest date$-test
-  #_(is (spec-check tick/date$))
-  #_(is= -1792793997471048000 (tick/date$)))
+#_(deftest date$-test
+  (is (spec-check tick/date$))
+  (is= -1792793997471048000 (tick/date$)))
 
 (deftest date->breakdown-test
   (is (spec-check tick/date->breakdown))

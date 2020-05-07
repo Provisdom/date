@@ -55,9 +55,9 @@
   (is= -24 (instant/passed-leap-days [2000 1] [1900 1])))
 
 ;;;INSTANT
-(deftest instant$-test
-  #_(is (spec-check instant/instant$))
-  #_(is= #inst "2020-05-05T20:57:50.661-00:00"
+#_(deftest instant$-test
+  (is (spec-check instant/instant$))
+  (is= #inst "2020-05-05T20:57:50.661-00:00"
          (instant/instant$)))
 
 (deftest instant->instant-ms-test
@@ -72,9 +72,9 @@
        (instant/instant->instant-ms #inst"9999-12-31T23:59:59.999-00:00")))
 
 ;;;INSTANT-MS
-(deftest instant-ms$-test
-  #_(is (spec-check instant/instant-ms$))
-  #_(is= 1588705104037 (instant/instant-ms$)))
+#_(deftest instant-ms$-test
+  (is (spec-check instant/instant-ms$))
+  (is= 1588705104037 (instant/instant-ms$)))
 
 (deftest instant-ms->instant-test
   (is (spec-check instant/instant-ms->instant))
