@@ -2,7 +2,7 @@ version: 2.1
 
 defaults: &defaults
   docker:
-    - image: circleci/clojure:tools-deps-1.9.0.381
+    - image: circleci/clojure:tools-deps-1.10.0.411
 
 orbs:
   cache: compute/cache@0.0.3
@@ -14,7 +14,9 @@ jobs:
     steps:
       - checkout
 
-      - run: clojure -J-Xmx3584m -A:test
+      - cache/clj:
+          steps:
+            - run: clojure -A:test:test-runner
 
 workflows:
   version: 2
