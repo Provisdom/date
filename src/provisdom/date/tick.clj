@@ -322,7 +322,7 @@ keywords."
              :anomaly ::anomalies/anomaly))
 
 (defn format-ticks
-  "Formats `ticks `as a string. Optionally, use `seconds-fraction-precision `to
+  "Formats `ticks` as a string. Optionally, use `seconds-fraction-precision` to
 get seconds as a fraction."
   ([ticks]
    (let [f2 (partial format "%02d")
@@ -529,7 +529,7 @@ get seconds as a fraction."
   (let [s (str/split date-string #"-|T")
         [s1 s2 s3 s4] s
         anomaly {::anomalies/category ::anomalies/exception
-                 ::anomalies/message  "bad ticks-string "
+                 ::anomalies/message  "bad ticks-string"
                  ::anomalies/fn       (var parse-ticks)}
         year (read-number s1 anomaly 2170)
         month (read-number s2 anomaly 1)

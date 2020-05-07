@@ -98,8 +98,10 @@
 (deftest instant-interval->period-test
   (is (spec-check instant/instant-interval->period))
   (is= 3.901584981971643E-4
-       (instant/instant-interval->period [(instant/instant-ms->instant 29029)
-                                          (instant/instant-ms->instant 12341242)]))
+       (instant/instant-interval->period
+         [(instant/instant-ms->instant 29029)
+          (instant/instant-ms->instant 12341242)]))
   (is= 3.919982829773927E-4
-       (instant/instant-interval->period [(instant/instant-ms->instant -29029)
-                                          (instant/instant-ms->instant 12341242)])))
+       (instant/instant-interval->period
+         [(instant/instant-ms->instant -29029)
+          (instant/instant-ms->instant 12341242)])))
