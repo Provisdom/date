@@ -495,7 +495,7 @@ earlier than 6/29/2325."
   :ret ::date)
 
 (defn format-date
-  "Formats `date `as a string. Optionally, use `seconds-fraction-precision `to
+  "Formats `date` as a string. Optionally, use `seconds-fraction-precision` to
 get seconds as a fraction."
   ([date]
    (let [f2 (partial format "%02d")
