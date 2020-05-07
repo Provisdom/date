@@ -13,27 +13,21 @@
     [provisdom.date.instant :as instant])
   (:import (java.util Date)))
 
-;;;;This namespace was created to build a new date and duration from the ground
-;;;; up in a no-nonsense manner.
+;;;;This namespace was created to handle dates and durations in an easy and
+;;;; intuitive manner.
 ;;;;
-;;;; 'ticks' are the smallest unit of time. There is
-;;;; a leap-day every 4 years excluding years divisible by 100,
-;;;;     plus years divisible by 400
-;;;; 400 years = 480 months = 20,871 weeks = 146,097 days
-;;;; 146097*24*60*60*1000000*11*13*8=ticks in 400 years
-;;;;   -- ticks were chosen to have 400 years be divisible by microseconds,
-;;;;      and is divisible by 2^12 and all numbers through 16.
-;;;; In this way, it is very likely that models that partition parts of a time
-;;;; period will not lose accuracy.
+;;;; 'ticks' are the smallest unit of time.
 ;;;;
-;;;; 'date' is the number of ticks from 2070, which was chosen to be 100 years
-;;;; in the future from 1970, the unix-epoch.
+;;;; 'date' is the number of ticks from 2070, which was chosen to be centered
+;;;; around a practical range (1814-2325) and is 100 years in the future from
+;;;; 1970, the unix-epoch.
 ;;;;
-;;;; So, dates and ticks can be easily added to form new dates.
+;;;; Dates and ticks can be easily added to form new dates.
 ;;;;
 ;;;; Months are the other basic unit, as the number of ticks per month can vary.
 ;;;;
-;;;; Dates, ticks, and months can be broken down into maps of their parts.
+;;;; Dates, ticks, and months can be broken down into maps of various unit
+;;;; types.
 ;;;;
 ;;;; There hasn't been much need for helper functions beyond the basics.
 ;;;; For example, to get minutes from start of month of `date`:
@@ -41,8 +35,18 @@
 ;;;;
 ;;;;  and to get minutes until end of month of `date`:
 ;;;;  (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)
+;;;;
+;;;; The tick size was chosen such that it is very likely that models that
+;;;; partition parts of a time period will not lose accuracy. More specifically,
+;;;; ticks were chosen to have 400 years be divisible by microseconds, and is
+;;;; divisible by 2^12 and all numbers through 16. There is a
+;;;; leap-day every 4 years excluding years divisible by 100, plus years
+;;;; divisible by 400:
+;;;;   400 years = 480 months = 20,871 weeks = 146,097 days
+;;;; and
+;;;;   146097*24*60*60*1000000*11*13*8=ticks in 400 years
 
-(declare breakdown->ticks days-in-month)
+(declare breakdown->ticks breakdown->months)
 
 (def ^:const date-1970 -3610189440000000000)
 (def ^:const date-2020 -1805144140800000000)
@@ -77,6 +81,17 @@
 (s/def ::date-interval ::intervals/long-interval)
 (s/def ::seconds-fraction-precision (s/int-in 0 16))        ;;formatting fractions of a second
 
+(s/def ::instant-ms (s/int-in -4906628144104 11218148144105))
+
+(defn- instant-in-range?
+  [instant]
+  (intervals/in-interval? [-4906628144104 11218148144104]
+                          (instant/instant->instant-ms instant)))
+
+(s/def ::instant
+  (s/with-gen (s/and inst? instant-in-range?)
+              #(gen/fmap instant/instant-ms->instant (s/gen ::instant-ms))))
+
 (def time-breakdown-all
   [::hours ::minutes ::seconds ::ms ::us ::ticks])
 
@@ -105,7 +120,7 @@
   [date-breakdown]
   (let [t (breakdown->ticks (dissoc date-breakdown ::weeks ::days))]
     (and (not (anomalies/anomaly? t))
-         (zero? (m/quot' t ticks-per-day)))))
+         (intervals/in-interval? [0 (dec ticks-per-day)] t))))
 
 (defn- date-breakdown-in-range?
   [{::keys [year month day-of-month]}]
@@ -122,7 +137,7 @@
 
 (defn- date-breakdown-valid-day-of-month?
   [{::keys [year month day-of-month]}]
-  (let [dm (days-in-month [year month])]
+  (let [dm (instant/days-in-month [year month])]
     (<= day-of-month dm)))
 
 (s/def ::date-breakdown
@@ -145,26 +160,19 @@
 
 (s/fdef date->instant-ms
   :args (s/cat :date ::date)
-  :ret ::instant/instant-ms)
+  :ret ::instant-ms)
 
 (defn instant-ms->date
   "Converts `instant-ms` to ::date."
   [instant-ms]
-  (if (intervals/in-interval? [-4906628144104 11218148144104] instant-ms)
-    (condp = instant-ms
-      -4906628144104 m/min-long
-      11218148144104 m/max-long
-      (* ticks-per-ms (+ (/ date-1970 ticks-per-ms) instant-ms)))
-    {::anomalies/category ::anomalies/exception
-     ::anomalies/message  (str "instant-ms out of range "
-                               "[-4906628144103 11218148144103]: "
-                               instant-ms)
-     ::anomalies/fn       (var instant-ms->date)}))
+  (condp = instant-ms
+    -4906628144104 m/min-long
+    11218148144104 m/max-long
+    (* ticks-per-ms (+ (/ date-1970 ticks-per-ms) instant-ms))))
 
 (s/fdef instant-ms->date
-  :args (s/cat :instant-ms ::instant/instant-ms)
-  :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+  :args (s/cat :instant-ms ::instant-ms)
+  :ret ::date)
 
 ;;;INSTANT
 (defn date->instant
@@ -174,28 +182,16 @@
 
 (s/fdef date->instant
   :args (s/cat :date ::date)
-  :ret ::instant/instant)
+  :ret ::instant)
 
 (defn instant->date
   "Converts an `instant` to a date."
   [instant]
-  (let [instant-ms (instant/instant->instant-ms instant)
-        anomaly-message (str "instant out of range "
-                             "[#inst\"1814-07-08T07:44:15.896-00:00 \" "
-                             "#inst\"2325-06-28T16:15:44.104-00:00 \"]"
-                             instant)
-        anomaly {::anomalies/category ::anomalies/exception
-                 ::anomalies/message  anomaly-message
-                 ::anomalies/fn       (var instant->date)}]
-    (if (anomalies/anomaly? instant-ms)
-      anomaly
-      (let [date (instant-ms->date instant-ms)]
-        (if (anomalies/anomaly? date) anomaly date)))))
+  (instant-ms->date (instant/instant->instant-ms instant)))
 
 (s/fdef instant->date
-  :args (s/cat :instant ::instant/instant)
-  :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+  :args (s/cat :instant ::instant)
+  :ret ::date)
 
 ;;;TIME
 (defn- parse-time
@@ -269,9 +265,9 @@
 
 (defn ticks->breakdown
   "`ticks` can be broken down as a map of the keys ::weeks, ::days, ::hours,
-::minutes, ::seconds, ::ms (milliseconds), ::us (microseconds), and ::ticks.
-Optionally, a `ticks-form` set can breakdown ticks as a subset of the
-keywords."
+  ::minutes, ::seconds, ::ms (milliseconds), ::us (microseconds), and ::ticks.
+  Optionally, a `ticks-form` set can breakdown ticks as a subset of the
+  keywords."
   ([ticks] (ticks->breakdown ticks (set ticks-breakdown-all)))
   ([ticks ticks-form]
    (let [want-ticks? (contains? ticks-form ::ticks)
@@ -313,7 +309,7 @@ keywords."
     (if (intervals/in-interval? [m/min-long m/max-long] t)
       (long t)
       {::anomalies/category ::anomalies/exception
-       ::anomalies/message  (str "ticks outside 'long' range: " t)
+       ::anomalies/message  (str "ticks out of long range: " t)
        ::anomalies/fn       (var breakdown->ticks)})))
 
 (s/fdef breakdown->ticks
@@ -323,7 +319,7 @@ keywords."
 
 (defn format-ticks
   "Formats `ticks` as a string. Optionally, use `seconds-fraction-precision` to
-get seconds as a fraction."
+  get seconds as a fraction."
   ([ticks]
    (let [f2 (partial format "%02d")
          f3 (partial format "%03d")
@@ -406,11 +402,11 @@ get seconds as a fraction."
   [months-breakdown]
   (let [{::keys [years months]
          :or    {years 0, months 0}} months-breakdown
-        m (+ months (* years 12.0))]
+        m (+' months (*' years 12))]
     (if (intervals/in-interval? [m/min-long m/max-long] m)
       (long m)
       {::anomalies/category ::anomalies/exception
-       ::anomalies/message  (str "months outside 'long' range: " m)
+       ::anomalies/message  (str "months out of long range: " m)
        ::anomalies/fn       (var breakdown->months)})))
 
 (s/fdef breakdown->months
@@ -426,11 +422,11 @@ get seconds as a fraction."
 
 (defn date->breakdown
   "A `date` can be broken down as a map of the keys ::year, ::month,
-::day-of-month, ::hours, ::minutes, ::seconds, ::ms (milliseconds),
-::us (microseconds), and ::ticks. Optionally, a `date-form` set can breakdown
-the date as a subset of the keywords. Common use case is to provide an empty
-set, which will only contain ::ticks (if necessary) and the required ::year,
-::month, and ::day-of-month."
+  ::day-of-month, ::hours, ::minutes, ::seconds, ::ms (milliseconds),
+  ::us (microseconds), and ::ticks. Optionally, a `date-form` set can breakdown
+  the date as a subset of the keywords. Common use case is to provide an empty
+  set, which will only contain ::ticks (if necessary) and the required ::year,
+  ::month, and ::day-of-month."
   ([date] (date->breakdown date (set date-breakdown-all)))
   ([date date-form]
    (let [[year ticks] (if (> date date-2045)
@@ -440,7 +436,7 @@ set, which will only contain ::ticks (if necessary) and the required ::year,
          [day month year] (loop [day (inc days)
                                  month 1
                                  year year]
-                            (let [dm (days-in-month [year month])]
+                            (let [dm (instant/days-in-month [year month])]
                               (if (> day dm)
                                 (recur (- day dm)
                                        (if (== month 12) 1 (inc month))
@@ -451,7 +447,9 @@ set, which will only contain ::ticks (if necessary) and the required ::year,
                                  year year]
                             (if (m/non+? day)
                               (let [new-mo (if (m/one? month) 12 (dec month))]
-                                (recur (+ day (days-in-month [year new-mo]))
+                                (recur (+ day (instant/days-in-month
+                                                [year
+                                                 new-mo]))
                                        new-mo
                                        (if (m/one? month) (dec year) year)))
                               [day month year]))
@@ -472,23 +470,17 @@ set, which will only contain ::ticks (if necessary) and the required ::year,
 
 (defn breakdown->date
   "A date is a long in tick units representing the number of ticks starting from
-'epoch' (2070) in the UTC time zone. A date must be later than 7/8/1814 and
-earlier than 6/29/2325."
+  'epoch' (2070) in the UTC time zone. A date must be later than 7/8/1814 and
+  earlier than 6/29/2325."
   [date-breakdown]
   (let [{::keys [year month day-of-month]} date-breakdown
-        ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))]
-    (if (anomalies/anomaly? ticks)
-      ticks
-      (let [days (+' (instant/days-until-month [year month]) ;includes leap-days
-                     (instant/passed-leap-days [epoch 1] [year 1]) ;don't want to double-count leap-days
-                     (* 365 (- year epoch))
-                     (dec day-of-month))
-            t (+' (*' ticks-per-day days) ticks)]
-        (if (intervals/in-interval? [m/min-long m/max-long] t)
-          (long t)
-          {::anomalies/category ::anomalies/exception
-           ::anomalies/message  (str "date outside 'long' range: " t)
-           ::anomalies/fn       (var breakdown->date)})))))
+        ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))
+        days (+' (instant/days-until-month [year month])    ;includes leap-days
+                 (instant/passed-leap-days [epoch 1] [year 1]) ;don't want to double-count leap-days
+                 (* 365 (+' year (- epoch)))
+                 (dec day-of-month))
+        date (+' (*' ticks-per-day days) ticks)]
+    (long date)))
 
 (s/fdef breakdown->date
   :args (s/cat :date-breakdown ::date-breakdown)
@@ -496,7 +488,7 @@ earlier than 6/29/2325."
 
 (defn format-date
   "Formats `date` as a string. Optionally, use `seconds-fraction-precision` to
-get seconds as a fraction."
+  get seconds as a fraction."
   ([date]
    (let [f2 (partial format "%02d")
          f3 (partial format "%03d")
@@ -564,7 +556,7 @@ get seconds as a fraction."
         date-breakdown (assoc date-breakdown ::year year
                                              ::month month)]
     (if (and (intervals/in-interval? [1814 2325] year)
-             (<= day-of-month (days-in-month [year month])))
+             (<= day-of-month (instant/days-in-month [year month])))
       (breakdown->date date-breakdown)
       {::anomalies/category ::anomalies/exception
        ::anomalies/message  "bad date"
@@ -577,8 +569,8 @@ get seconds as a fraction."
              :anomaly ::anomalies/anomaly))
 
 (defn day-of-week
-  "From a supplied `date`, returns the day of the week as a keyword
-:monday, :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday."
+  "From a supplied `date`, returns the day of the week as a keyword :monday,
+  :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday."
   [date]
   (nth days-of-week (m/mod' (+ (m/quot' date ticks-per-day) 3) 7)))
 

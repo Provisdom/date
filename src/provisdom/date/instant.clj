@@ -5,7 +5,6 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [java-time.format :as jt-format]
-    [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals])
   (:import (java.util Date)))
@@ -14,6 +13,8 @@
 ;;;; instant-ms (inst-ms java-date), leap years, periods (average years),
 ;;;; and common conversions.
 ;;;; TODO: add formatting and other helpers with java-time as needed
+
+(declare instant->instant-ms instant-ms->instant)
 
 (def ^:const unix-epoch "1970" 1970)
 (def ^:const average-weeks-per-year "52.1775" 52.1775)
@@ -65,8 +66,17 @@
 (s/def ::month (s/int-in 1 13))
 (s/def ::year-and-month (s/tuple ::year ::month))
 (s/def ::days-per-month (s/int-in 28 32))
-(s/def ::instant inst?)
-(s/def ::instant-ms ::m/long)
+(s/def ::instant-ms (s/int-in -62135769600000 253402300800000))
+
+(defn- instant-in-range?
+  [instant]
+  (intervals/in-interval? [-62135769600000 253402300799999]
+                          (instant->instant-ms instant)))
+
+(s/def ::instant
+  (s/with-gen (s/and inst? instant-in-range?)
+              #(gen/fmap instant-ms->instant (s/gen ::instant-ms))))
+
 (s/def ::duration-ms ::m/long)
 (s/def ::period ::m/number)                                 ;;average-years
 
@@ -165,18 +175,11 @@
 (defn instant-ms->instant
   "Converts `instant-ms` to ::instant."
   [instant-ms]
-  (if (intervals/in-interval? [-62135769600000 253402300799999] instant-ms)
-    (Date. ^long instant-ms)
-    {::anomalies/category ::anomalies/exception
-     ::anomalies/message  (str "instant-ms out of range"
-                               "[-62135769600000 253402300799999]:"
-                               instant-ms)
-     ::anomalies/fn       (var instant-ms->instant)}))
+  (Date. ^long instant-ms))
 
 (s/fdef instant-ms->instant
   :args (s/cat :instant-ms ::instant-ms)
-  :ret (s/or :instant ::instant
-             :anomaly ::anomalies/anomaly))
+  :ret ::instant)
 
 ;;;PERIODS
 (defn instant-ms->period
