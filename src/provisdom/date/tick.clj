@@ -46,7 +46,7 @@
 ;;;; and
 ;;;;   146097*24*60*60*1000000*11*13*8=ticks in 400 years
 
-(declare breakdown->ticks breakdown->months date-breakdown?)
+(declare breakdown->ticks breakdown->months)
 
 (def ^:const date-1970 -3610189440000000000)
 (def ^:const date-2020 -1805144140800000000)
@@ -120,8 +120,35 @@
   (s/keys :req [::year ::month ::day-of-month]
           :opt [::hours ::minutes ::seconds ::ms ::us ::ticks]))
 
+(defn- date-breakdown-day-in-month?
+  [{::keys [year month day-of-month]}]
+  (<= day-of-month (instant/days-in-month [year month])))
+
+(defn- date-breakdown-in-range?
+  [x]
+  (let [{::keys [year month day-of-month]} x]
+    (let [t (breakdown->ticks (dissoc x ::weeks ::days))]
+      (and (not (anomalies/anomaly? t))
+           (intervals/in-interval? [0 (dec ticks-per-day)] t)
+           (cond (= year 1814)
+                 (or (> month 7)
+                     (and (= month 7)
+                          (or (> day-of-month 8)
+                              (and (= day-of-month 8) (>= t 31867145224192)))))
+
+                 (= year 2325)
+                 (or (< month 6)
+                     (and (= month 6)
+                          (or (< day-of-month 28)
+                              (and (= day-of-month 28) (<= t 66974454775807)))))
+
+                 :else
+                 true)))))
+
 (s/def ::date-breakdown
-  (s/and ::core-date-breakdown date-breakdown?))
+  (s/and ::core-date-breakdown
+         date-breakdown-day-in-month?
+         date-breakdown-in-range?))
 
 (def days-of-week
   [:sunday :monday :tuesday :wednesday :thursday :friday :saturday])
@@ -466,27 +493,8 @@
   "Tests whether `x` is a ::date-breakdown."
   [x]
   (and (s/valid? ::core-date-breakdown x)
-       (let [{::keys [year month day-of-month]} x]
-         (and (<= day-of-month (instant/days-in-month [year month]))
-              (let [t (breakdown->ticks (dissoc x ::weeks ::days))]
-                (and (not (anomalies/anomaly? t))
-                     (intervals/in-interval? [0 (dec ticks-per-day)] t)
-                     (cond (= year 1814)
-                           (or (> month 7)
-                               (and (= month 7)
-                                    (or (> day-of-month 8)
-                                        (and (= day-of-month 8)
-                                             (>= t 31867145224192)))))
-
-                           (= year 2325)
-                           (or (< month 6)
-                               (and (= month 6)
-                                    (or (< day-of-month 28)
-                                        (and (= day-of-month 28)
-                                             (<= t 66974454775807)))))
-
-                           :else
-                           true)))))))
+       (date-breakdown-day-in-month? x)
+       (date-breakdown-in-range? x)))
 
 (s/fdef date-breakdown?
   :args (s/cat :x any?)
