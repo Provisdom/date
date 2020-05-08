@@ -7,7 +7,7 @@
     [provisdom.date.tick :as tick]
     [provisdom.math.core :as m]))
 
-;15 seconds
+;17 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -123,8 +123,8 @@
 
 ;;;DATE
 #_(deftest date$-test
-  (is (spec-check tick/date$))
-  (is= -1792793997471048000 (tick/date$)))
+    (is (spec-check tick/date$))
+    (is= -1792793997471048000 (tick/date$)))
 
 (deftest date->breakdown-test
   (is (spec-check tick/date->breakdown))
@@ -209,6 +209,15 @@
          #::tick{:us    0, :month 3, :seconds 0, :day-of-month 1, :year 2024,
                  :hours 0, :ticks 0, :minutes 0, :ms 0})))
 
+(deftest date-breakdown?-test
+  (is (spec-check tick/date-breakdown?))
+  (is (tick/date-breakdown?
+        #::tick{:us    0, :month 3, :seconds 0, :day-of-month 1, :year 2024,
+                :hours 0, :ticks 0, :minutes 0, :ms 0}))
+  (is-not (tick/date-breakdown?
+            #::tick{:us    0, :month 2, :seconds 0, :day-of-month 30,
+                    :year 2024, :hours 0, :ticks 0, :minutes 0, :ms 0})))
+
 (deftest format-date-test
   (is (spec-check tick/format-date))
   (is= "2031-08-28T13:30:07.671.748:258"
@@ -276,6 +285,13 @@
        (tick/start-of-day (+ tick/date-2020 2342478))))
 
 ;;;DATE INTERVALS
+(deftest date-interval->months-difference-test
+  (is (spec-check tick/date-interval->months-difference))
+  (is= 77
+       (tick/date-interval->months-difference [73847 234242232323552353]))
+  (is= 1
+       (tick/date-interval->months-difference [-2473847 2342423])))
+
 (deftest date-interval->months-calendar-test
   (is (spec-check tick/date-interval->months-calendar))
   (is= [77 2656363523478506]

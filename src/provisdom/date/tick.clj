@@ -46,7 +46,7 @@
 ;;;; and
 ;;;;   146097*24*60*60*1000000*11*13*8=ticks in 400 years
 
-(declare breakdown->ticks breakdown->months)
+(declare breakdown->ticks breakdown->months date-breakdown?)
 
 (def ^:const date-1970 -3610189440000000000)
 (def ^:const date-2020 -1805144140800000000)
@@ -116,36 +116,12 @@
 (s/def ::date-form
   (s/coll-of (set date-breakdown-all) :kind set? :into #{}))
 
-(defn- date-breakdown-ticks-less-than-a-day?
-  [date-breakdown]
-  (let [t (breakdown->ticks (dissoc date-breakdown ::weeks ::days))]
-    (and (not (anomalies/anomaly? t))
-         (intervals/in-interval? [0 (dec ticks-per-day)] t))))
-
-(defn- date-breakdown-in-range?
-  [{::keys [year month day-of-month]}]
-  (cond (= year 1814)
-        (or (> month 7)
-            (and (= month 7) (>= day-of-month 8)))
-
-        (= year 2325)
-        (or (< month 6)
-            (and (= month 6) (<= day-of-month 29)))
-
-        :else
-        true))
-
-(defn- date-breakdown-valid-day-of-month?
-  [{::keys [year month day-of-month]}]
-  (let [dm (instant/days-in-month [year month])]
-    (<= day-of-month dm)))
+(s/def ::core-date-breakdown
+  (s/keys :req [::year ::month ::day-of-month]
+          :opt [::hours ::minutes ::seconds ::ms ::us ::ticks]))
 
 (s/def ::date-breakdown
-  (s/and (s/keys :req [::year ::month ::day-of-month]
-                 :opt [::hours ::minutes ::seconds ::ms ::us ::ticks])
-         date-breakdown-ticks-less-than-a-day?
-         date-breakdown-in-range?
-         date-breakdown-valid-day-of-month?))
+  (s/and ::core-date-breakdown date-breakdown?))
 
 (def days-of-week
   [:sunday :monday :tuesday :wednesday :thursday :friday :saturday])
@@ -486,6 +462,36 @@
   :args (s/cat :date-breakdown ::date-breakdown)
   :ret ::date)
 
+(defn date-breakdown?
+  "Tests whether `x` is a ::date-breakdown."
+  [x]
+  (and (s/valid? ::core-date-breakdown x)
+       (let [{::keys [year month day-of-month]} x]
+         (and (<= day-of-month (instant/days-in-month [year month]))
+              (let [t (breakdown->ticks (dissoc x ::weeks ::days))]
+                (and (not (anomalies/anomaly? t))
+                     (intervals/in-interval? [0 (dec ticks-per-day)] t)
+                     (cond (= year 1814)
+                           (or (> month 7)
+                               (and (= month 7)
+                                    (or (> day-of-month 8)
+                                        (and (= day-of-month 8)
+                                             (>= t 31867145224192)))))
+
+                           (= year 2325)
+                           (or (< month 6)
+                               (and (= month 6)
+                                    (or (< day-of-month 28)
+                                        (and (= day-of-month 28)
+                                             (<= t 66974454775807)))))
+
+                           :else
+                           true)))))))
+
+(s/fdef date-breakdown?
+  :args (s/cat :x any?)
+  :ret boolean?)
+
 (defn format-date
   "Formats `date` as a string. Optionally, use `seconds-fraction-precision` to
   get seconds as a fraction."
@@ -548,15 +554,14 @@
 (defn add-months-to-date
   "Adds `months` to `date`."
   [date months]
-  (let [{::keys [year month day-of-month]
+  (let [{::keys [year month]
          :as    date-breakdown} (date->breakdown date #{})
         [years months] (m/quot-and-mod' (dec (+ months month)) 12)
         year (+ year years)
         month (inc months)
         date-breakdown (assoc date-breakdown ::year year
                                              ::month month)]
-    (if (and (intervals/in-interval? [1814 2325] year)
-             (<= day-of-month (instant/days-in-month [year month])))
+    (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
       {::anomalies/category ::anomalies/exception
        ::anomalies/message  "bad date"
@@ -611,28 +616,7 @@
   :ret ::date)
 
 ;;;DATE INTERVALS
-(defn date-interval->months-calendar
-  "Returns the number of calendar months and remaining ticks from a
-  date-interval."
-  [[start-date end-date]]
-  (let [{start-year  ::year
-         start-month ::month} (date->breakdown start-date #{})
-        {end-year  ::year
-         end-month ::month} (date->breakdown end-date #{})
-        months (+ (* 12 (- end-year start-year))
-                  (- end-month start-month))
-        new-start-date (add-months-to-date start-date months)]
-    (if (anomalies/anomaly? new-start-date)
-      new-start-date
-      [months (- end-date new-start-date)])))
-
-(s/fdef date-interval->months-calendar
-  :args (s/cat :date-interval ::date-interval)
-  :ret (s/or :duration ::duration
-             :anomaly ::anomalies/anomaly))
-
-(defn date-interval->months-floor
-  "Returns the floor of months and remaining ticks from a date-interval."
+(defn- date-interval->duration
   [[start-date end-date]]
   (let [{start-year  ::year
          start-month ::month
@@ -646,6 +630,36 @@
                   (- end-month start-month))
         ticks (+ (* ticks-per-day (- end-days start-days))
                  (- (or end-ticks 0) (or start-ticks 0)))]
+    [months ticks]))
+
+(defn date-interval->months-difference
+  "Returns the number of calendar months from a `date-interval`."
+  [date-interval]
+  (first (date-interval->duration date-interval)))
+
+(s/fdef date-interval->months-difference
+  :args (s/cat :date-interval ::date-interval)
+  :ret ::months)
+
+(defn date-interval->months-calendar
+  "Returns the number of calendar months and remaining ticks from a
+  date-interval."
+  [[start-date end-date]]
+  (let [months (date-interval->months-difference [start-date end-date])
+        new-start-date (add-months-to-date start-date months)]
+    (if (anomalies/anomaly? new-start-date)
+      new-start-date
+      [months (- end-date new-start-date)])))
+
+(s/fdef date-interval->months-calendar
+  :args (s/cat :date-interval ::date-interval)
+  :ret (s/or :duration ::duration
+             :anomaly ::anomalies/anomaly))
+
+(defn date-interval->months-floor
+  "Returns the floor of months and remaining ticks from a date-interval."
+  [[start-date end-date]]
+  (let [[months ticks] (date-interval->duration [start-date end-date])]
     (if (neg? ticks)
       (let [new-start-date (add-months-to-date start-date (dec months))]
         (if (anomalies/anomaly? new-start-date)
@@ -661,18 +675,7 @@
 (defn date-interval->months-ceil
   "Returns the ceil of months and remaining ticks from a date-interval."
   [[start-date end-date]]
-  (let [{start-year  ::year
-         start-month ::month
-         start-days  ::day-of-month
-         start-ticks ::ticks} (date->breakdown start-date #{})
-        {end-year  ::year
-         end-month ::month
-         end-days  ::day-of-month
-         end-ticks ::ticks} (date->breakdown end-date #{})
-        months (+ (* 12 (- end-year start-year))
-                  (- end-month start-month))
-        ticks (+ (* ticks-per-day (- end-days start-days))
-                 (- (or end-ticks 0) (or start-ticks 0)))]
+  (let [[months ticks] (date-interval->duration [start-date end-date])]
     (if (pos? ticks)
       (let [new-start-date (add-months-to-date start-date (inc months))]
         (if (anomalies/anomaly? new-start-date)
