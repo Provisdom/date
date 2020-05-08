@@ -81,6 +81,9 @@
 (s/def ::date-interval ::intervals/long-interval)
 (s/def ::seconds-fraction-precision (s/int-in 0 16))        ;;formatting fractions of a second
 
+(s/def ::ticks-in-month
+  (s/int-in (* 28 ticks-per-day) (inc (* 31 ticks-per-day))))
+
 (s/def ::instant-ms (s/int-in -4906628144104 11218148144105))
 
 (defn- instant-in-range?
@@ -622,6 +625,16 @@
 (s/fdef start-of-day
   :args (s/cat :date ::date)
   :ret ::date)
+
+(defn ticks-in-month
+  "Returns the number of ticks in the month that `date` resides."
+  [date]
+  (let [{::keys [year month]} (date->breakdown date)]
+    (* (instant/days-in-month [year month]) ticks-per-day)))
+
+(s/fdef ticks-in-month
+  :args (s/cat :date ::date)
+  :ret ::ticks-in-month)
 
 ;;;DATE INTERVALS
 (defn- date-interval->duration

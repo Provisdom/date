@@ -284,6 +284,14 @@
   (is= tick/date-2020
        (tick/start-of-day (+ tick/date-2020 2342478))))
 
+(deftest ticks-in-month-test
+  (is (spec-check tick/ticks-in-month))
+  (is= 3064089600000000
+       (tick/ticks-in-month tick/date-2020))
+  (is= 2965248000000000
+       (tick/ticks-in-month
+         (+ tick/date-2020 (* 3 tick/ticks-per-average-month)))))
+
 ;;;DATE INTERVALS
 (deftest date-interval->months-difference-test
   (is (spec-check tick/date-interval->months-difference))
