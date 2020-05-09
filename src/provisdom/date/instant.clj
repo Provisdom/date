@@ -66,6 +66,8 @@
 (s/def ::month (s/int-in 1 13))
 (s/def ::year-and-month (s/tuple ::year ::month))
 (s/def ::days-per-month (s/int-in 28 32))
+
+;;incompatible with ticks, use spec from ticks ns if using ticks/date
 (s/def ::instant-ms (s/int-in -62135769600000 253402300800000))
 
 (defn- instant-in-range?
@@ -73,6 +75,7 @@
   (intervals/in-interval? [-62135769600000 253402300799999]
                           (instant->instant-ms instant)))
 
+;;incompatible with ticks, use spec from ticks ns if using ticks/date
 (s/def ::instant
   (s/with-gen (s/and inst? instant-in-range?)
               #(gen/fmap instant-ms->instant (s/gen ::instant-ms))))
@@ -80,10 +83,11 @@
 (s/def ::duration-ms ::m/long)
 (s/def ::period ::m/number)                                 ;;average-years
 
-(defn- first-instant-not-after-second?
+(defn first-instant-not-after-second?
   [[instant1 instant2]]
   (not (.after ^Date instant1 ^Date instant2)))
 
+;;incompatible with ticks, use spec from ticks ns if using ticks/date
 (s/def ::instant-interval
   (s/and (s/tuple ::instant ::instant)
          first-instant-not-after-second?))

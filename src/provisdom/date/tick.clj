@@ -95,6 +95,10 @@
   (s/with-gen (s/and inst? instant-in-range?)
               #(gen/fmap instant/instant-ms->instant (s/gen ::instant-ms))))
 
+(s/def ::instant-interval
+  (s/and (s/tuple ::instant ::instant)
+         instant/first-instant-not-after-second?))
+
 (def time-breakdown-all
   [::hours ::minutes ::seconds ::ms ::us ::ticks])
 
