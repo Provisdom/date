@@ -7,7 +7,7 @@
     [provisdom.date.tick :as tick]
     [provisdom.math.core :as m]))
 
-;19 seconds
+;23 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -293,33 +293,35 @@
          (+ tick/date-2020 (* 3 tick/ticks-per-average-month)))))
 
 ;;;DATE INTERVALS
-(deftest date-interval->months-difference-test
-  (is (spec-check tick/date-interval->months-difference))
+(deftest months-difference-test
+  (is (spec-check tick/months-difference))
   (is= 77
-       (tick/date-interval->months-difference [73847 234242232323552353]))
+       (tick/months-difference [73847 234242232323552353]))
   (is= 1
-       (tick/date-interval->months-difference [-2473847 2342423])))
+       (tick/months-difference [-2473847 2342423]))
+  (is= -1
+       (tick/months-difference [2342423 -2473847])))
 
-(deftest date-interval->months-calendar-test
-  (is (spec-check tick/date-interval->months-calendar))
+(deftest date-range->months-calendar-test
+  (is (spec-check tick/date-range->months-calendar))
   (is= [77 2656363523478506]
-       (tick/date-interval->months-calendar [73847 234242232323552353]))
+       (tick/date-range->months-calendar [73847 234242232323552353]))
   (is= [1 -3064089595183730]
-       (tick/date-interval->months-calendar [-2473847 2342423])))
+       (tick/date-range->months-calendar [-2473847 2342423])))
 
-(deftest date-interval->months-floor-test
-  (is (spec-check tick/date-interval->months-floor))
+(deftest date-range->months-floor-test
+  (is (spec-check tick/date-range->months-floor))
   (is= [77 2656363523478506]
-       (tick/date-interval->months-floor [73847 234242232323552353]))
+       (tick/date-range->months-floor [73847 234242232323552353]))
   (is= [0 4816270]
-       (tick/date-interval->months-floor [-2473847 2342423])))
+       (tick/date-range->months-floor [-2473847 2342423])))
 
-(deftest date-interval->months-ceil-test
-  (is (spec-check tick/date-interval->months-ceil))
+(deftest date-range->months-ceil-test
+  (is (spec-check tick/date-range->months-ceil))
   (is= [78 -308884476521494]
-       (tick/date-interval->months-ceil [73847 234242232323552353]))
+       (tick/date-range->months-ceil [73847 234242232323552353]))
   (is= [1 -3064089595183730]
-       (tick/date-interval->months-ceil [-2473847 2342423])))
+       (tick/date-range->months-ceil [-2473847 2342423])))
 
 ;;;PERIODS
 (deftest ticks->period-test
@@ -329,12 +331,12 @@
   (is= -6.852542892382862E-11
        (tick/ticks->period -2473847)))
 
-(deftest date-interval->period-test
-  (is (spec-check tick/date-interval->period))
+(deftest date-range->period-test
+  (is (spec-check tick/date-range->period))
   (is= 3.3368513762008396E-4
-       (tick/date-interval->period [294823904829 12341242141242]))
+       (tick/date-range->period [294823904829 12341242141242]))
   (is= 6.917427246472333E-11
-       (tick/date-interval->period [-2473847 23424])))
+       (tick/date-range->period [-2473847 23424])))
 
 ;;;PREDICATES
 (deftest weekend?-test
@@ -367,6 +369,12 @@
                                ::tick/month        12
                                ::tick/day-of-month 31}))))
 
+(deftest date-range?-test
+  (is (spec-check tick/date-range?))
+  (is (tick/date-range? [tick/date-2020 tick/date-2070]))
+  (is (tick/date-range? [tick/date-2020 tick/date-2020]))
+  (is (tick/date-range? [tick/date-2070 tick/date-2020])))
+
 (deftest date-interval?-test
   (is (spec-check tick/date-interval?))
   (is (tick/date-interval? [tick/date-2020 tick/date-2070]))
@@ -381,6 +389,6 @@
 
 (deftest same-day?-test
   (is (spec-check tick/same-day?))
-  (is-not (tick/same-day? tick/date-2020 tick/date-2070))
-  (is (tick/same-day? tick/date-2020 tick/date-2020))
-  (is-not (tick/same-day? tick/date-2070 tick/date-2020)))
+  (is-not (tick/same-day? [tick/date-2020 tick/date-2070]))
+  (is (tick/same-day? [tick/date-2020 tick/date-2020]))
+  (is-not (tick/same-day? [tick/date-2070 tick/date-2020])))

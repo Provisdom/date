@@ -78,7 +78,9 @@
 (s/def ::ms ::m/long)
 (s/def ::us ::m/long)
 (s/def ::duration (s/tuple ::months ::ticks))
+(s/def ::date-range (s/tuple ::date ::date))
 (s/def ::date-interval ::intervals/long-interval)
+(s/def ::strict-date-interval (intervals/strict-interval-spec ::m/date))
 (s/def ::seconds-fraction-precision (s/int-in 0 16))        ;;formatting fractions of a second
 
 (s/def ::ticks-in-month
@@ -640,8 +642,8 @@
   :args (s/cat :date ::date)
   :ret ::ticks-in-month)
 
-;;;DATE INTERVALS
-(defn- date-interval->duration
+;;;DATE RANGE
+(defn- date-range->duration
   [[start-date end-date]]
   (let [{start-year  ::year
          start-month ::month
@@ -657,34 +659,34 @@
                  (- (or end-ticks 0) (or start-ticks 0)))]
     [months ticks]))
 
-(defn date-interval->months-difference
-  "Returns the number of calendar months from a `date-interval`."
-  [date-interval]
-  (first (date-interval->duration date-interval)))
+(defn months-difference
+  "Returns the number of calendar months from a `date-range`."
+  [date-range]
+  (first (date-range->duration date-range)))
 
-(s/fdef date-interval->months-difference
-  :args (s/cat :date-interval ::date-interval)
+(s/fdef months-difference
+  :args (s/cat :date-range ::date-range)
   :ret ::months)
 
-(defn date-interval->months-calendar
+(defn date-range->months-calendar
   "Returns the number of calendar months and remaining ticks from a
-  date-interval."
+  date-range."
   [[start-date end-date]]
-  (let [months (date-interval->months-difference [start-date end-date])
+  (let [months (months-difference [start-date end-date])
         new-start-date (add-months-to-date start-date months)]
     (if (anomalies/anomaly? new-start-date)
       new-start-date
       [months (- end-date new-start-date)])))
 
-(s/fdef date-interval->months-calendar
-  :args (s/cat :date-interval ::date-interval)
+(s/fdef date-range->months-calendar
+  :args (s/cat :date-range ::date-range)
   :ret (s/or :duration ::duration
              :anomaly ::anomalies/anomaly))
 
-(defn date-interval->months-floor
-  "Returns the floor of months and remaining ticks from a date-interval."
+(defn date-range->months-floor
+  "Returns the floor of months and remaining ticks from a date-range."
   [[start-date end-date]]
-  (let [[months ticks] (date-interval->duration [start-date end-date])]
+  (let [[months ticks] (date-range->duration [start-date end-date])]
     (if (neg? ticks)
       (let [new-start-date (add-months-to-date start-date (dec months))]
         (if (anomalies/anomaly? new-start-date)
@@ -692,15 +694,15 @@
           [(dec months) (- end-date new-start-date)]))
       [months ticks])))
 
-(s/fdef date-interval->months-floor
-  :args (s/cat :date-interval ::date-interval)
+(s/fdef date-range->months-floor
+  :args (s/cat :date-range ::date-range)
   :ret (s/or :duration ::duration
              :anomaly ::anomalies/anomaly))
 
-(defn date-interval->months-ceil
-  "Returns the ceil of months and remaining ticks from a date-interval."
+(defn date-range->months-ceil
+  "Returns the ceil of months and remaining ticks from a date-range."
   [[start-date end-date]]
-  (let [[months ticks] (date-interval->duration [start-date end-date])]
+  (let [[months ticks] (date-range->duration [start-date end-date])]
     (if (pos? ticks)
       (let [new-start-date (add-months-to-date start-date (inc months))]
         (if (anomalies/anomaly? new-start-date)
@@ -708,8 +710,8 @@
           [(inc months) (- end-date new-start-date)]))
       [months ticks])))
 
-(s/fdef date-interval->months-ceil
-  :args (s/cat :date-interval ::date-interval)
+(s/fdef date-range->months-ceil
+  :args (s/cat :date-range ::date-range)
   :ret (s/or :duration ::duration
              :anomaly ::anomalies/anomaly))
 
@@ -723,15 +725,14 @@
   :args (s/cat :ticks ::ticks)
   :ret ::instant/period)
 
-(defn date-interval->period
-  "Returns period from `date-interval`."
-  [date-interval]
-  (/ (- (second date-interval) (double (first date-interval)))
-     ticks-per-average-year))
+(defn date-range->period
+  "Returns period from `date-range`."
+  [[start-date end-date]]
+  (/ (- end-date (double start-date)) ticks-per-average-year))
 
-(s/fdef date-interval->period
-  :args (s/cat :date-interval ::date-interval)
-  :ret (s/and ::instant/period m/non-?))
+(s/fdef date-range->period
+  :args (s/cat :date-range ::date-range)
+  :ret ::instant/period)
 
 ;;;PREDICATES
 (defn weekend?
@@ -771,14 +772,22 @@
   :args (s/cat :date ::date)
   :ret boolean?)
 
-(defn date-interval?
-  "Returns true if `x` is a ::date-interval. "
+(defn date-range?
+  "Returns true if `x` is a ::date-range. "
   [x]
   (and (sequential? x)
        (= 2 (count x))
        (m/long? (first x))
-       (m/long? (second x))
-       (<= (first x) (second x))))
+       (m/long? (second x))))
+
+(s/fdef date-range?
+  :args (s/cat :x any?)
+  :ret boolean?)
+
+(defn date-interval?
+  "Returns true if `x` is a ::date-interval. "
+  [x]
+  (and (date-range? x) (<= (first x) (second x))))
 
 (s/fdef date-interval?
   :args (s/cat :x any?)
@@ -787,20 +796,19 @@
 (defn strict-date-interval?
   "Returns true if `x` is a ::strict-date-interval."
   [x]
-  (and (date-interval? x) (< (first x) (second x))))
+  (and (date-range? x) (< (first x) (second x))))
 
 (s/fdef strict-date-interval?
   :args (s/cat :x any?)
   :ret boolean?)
 
 (defn same-day?
-  "Returns true if `date1 `and `date2 `are on the same day."
-  [date1 date2]
-  (let [breakdown1 (dissoc (date->breakdown date1 #{}) ::ticks)
-        breakdown2 (dissoc (date->breakdown date2 #{}) ::ticks)]
-    (= breakdown1 breakdown2)))
+  "Returns true if both dates of date-range fall on the same day."
+  [[start-date end-date]]
+  (let [start-breakdown (dissoc (date->breakdown start-date #{}) ::ticks)
+        end-breakdown (dissoc (date->breakdown end-date #{}) ::ticks)]
+    (= start-breakdown end-breakdown)))
 
 (s/fdef same-day?
-  :args (s/cat :date1 ::date
-               :date2 ::date)
+  :args (s/cat :date-range ::date-range)
   :ret boolean?)
