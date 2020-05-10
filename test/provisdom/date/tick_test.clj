@@ -7,7 +7,7 @@
     [provisdom.date.tick :as tick]
     [provisdom.math.core :as m]))
 
-;23 seconds
+;22 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -36,6 +36,12 @@
   (is= m/max-long
        (tick/instant-ms->date 11218148144104)))
 
+(deftest bound-ms->instant-ms-test
+  (is (spec-check tick/bound-ms->instant-ms))
+  (is= -4906628144104 (tick/bound-ms->instant-ms m/min-long))
+  (is= 11218148144104 (tick/bound-ms->instant-ms m/max-long))
+  (is= 0 (tick/bound-ms->instant-ms 0)))
+
 ;;;INSTANT
 (deftest date->instant-test
   (is (spec-check tick/date->instant))
@@ -58,6 +64,15 @@
        (tick/instant->date #inst"1814-07-08T07:44:15.896-00:00"))
   (is= m/max-long
        (tick/instant->date #inst"2325-06-28T16:15:44.104-00:00")))
+
+(deftest bound-java-date->instant-test
+  (is (spec-check tick/bound-java-date->instant))
+  (is= #inst "1814-07-08T07:44:15.896-00:00"
+       (tick/bound-java-date->instant #inst"0000-01-01T00:00:00.000-00:00"))
+  (is= #inst "2325-06-28T16:15:44.104-00:00"
+       (tick/bound-java-date->instant #inst"9999-12-31T23:59:59.999-00:00"))
+  (is= #inst "2070-01-01T00:00:00.000-00:00"
+       (tick/bound-java-date->instant #inst"2070-01-01T00:00:00.000-00:00")))
 
 ;;;TICKS
 (deftest ticks->breakdown-test
@@ -368,24 +383,6 @@
         (tick/breakdown->date {::tick/year         2020
                                ::tick/month        12
                                ::tick/day-of-month 31}))))
-
-(deftest date-range?-test
-  (is (spec-check tick/date-range?))
-  (is (tick/date-range? [tick/date-2020 tick/date-2070]))
-  (is (tick/date-range? [tick/date-2020 tick/date-2020]))
-  (is (tick/date-range? [tick/date-2070 tick/date-2020])))
-
-(deftest date-interval?-test
-  (is (spec-check tick/date-interval?))
-  (is (tick/date-interval? [tick/date-2020 tick/date-2070]))
-  (is (tick/date-interval? [tick/date-2020 tick/date-2020]))
-  (is-not (tick/date-interval? [tick/date-2070 tick/date-2020])))
-
-(deftest strict-date-interval?-test
-  (is (spec-check tick/strict-date-interval?))
-  (is (tick/strict-date-interval? [tick/date-2020 tick/date-2070]))
-  (is-not (tick/strict-date-interval? [tick/date-2020 tick/date-2020]))
-  (is-not (tick/strict-date-interval? [tick/date-2070 tick/date-2020])))
 
 (deftest same-day?-test
   (is (spec-check tick/same-day?))

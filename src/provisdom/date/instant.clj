@@ -9,12 +9,14 @@
     [provisdom.math.intervals :as intervals])
   (:import (java.util Date)))
 
-;;;;This namespace has basic helpers for instant (java Date),
-;;;; instant-ms (inst-ms java-date), leap years, periods (average years),
+;;;;This namespace has basic helpers for inst (java Date constrained to 0 to
+;;;; <10K years -- this avoids errors and inconsistencies),
+;;;; in-ms (inst-ms java-date), leap years, periods (average years),
 ;;;; and common conversions.
+;;;;
 ;;;; TODO: add formatting and other helpers with java-time as needed
 
-(declare instant->instant-ms instant-ms->instant)
+(declare inst->in-ms in-ms->inst)
 
 (def ^:const unix-epoch "1970" 1970)
 (def ^:const average-weeks-per-year "52.1775" 52.1775)
@@ -67,30 +69,33 @@
 (s/def ::year-and-month (s/tuple ::year ::month))
 (s/def ::days-per-month (s/int-in 28 32))
 
-;;incompatible with ticks, use spec from ticks ns if using ticks/date
-(s/def ::instant-ms (s/int-in -62135769600000 253402300800000))
+;;for compatibility with ticks, use ::tick/instant-ms
+;;::in-ms keeps the inst in the range 0 to <10K years
+(s/def ::in-ms (s/int-in -62135769600000 253402300800000))
 
-(defn- instant-in-range?
-  [instant]
+(defn- inst-in-range?
+  [inst]
   (intervals/in-interval? [-62135769600000 253402300799999]
-                          (instant->instant-ms instant)))
+                          (inst->in-ms inst)))
 
-;;incompatible with ticks, use spec from ticks ns if using ticks/date
-(s/def ::instant
-  (s/with-gen (s/and inst? instant-in-range?)
-              #(gen/fmap instant-ms->instant (s/gen ::instant-ms))))
+(s/def ::java-date inst?)
+
+;;for compatibility with ticks, use ::tick/instant
+(s/def ::inst
+  (s/with-gen (s/and ::java-date inst-in-range?)
+              #(gen/fmap in-ms->inst (s/gen ::in-ms))))
 
 (s/def ::duration-ms ::m/long)
 (s/def ::period ::m/number)                                 ;;average-years
 
-(defn first-instant-not-after-second?
-  [[instant1 instant2]]
-  (not (.after ^Date instant1 ^Date instant2)))
+(defn first-inst-not-after-second?
+  [[inst1 inst2]]
+  (not (.after ^Date inst1 ^Date inst2)))
 
-;;incompatible with ticks, use spec from ticks ns if using ticks/date
-(s/def ::instant-interval
-  (s/and (s/tuple ::instant ::instant)
-         first-instant-not-after-second?))
+;;for compatibility with ticks, use ::tick/instant-interval
+(s/def ::inst-interval
+  (s/and (s/tuple ::inst ::inst)
+         first-inst-not-after-second?))
 
 ;;;LEAP YEARS
 (defn leap-year?
@@ -147,62 +152,87 @@
                :year-and-month2 ::year-and-month)
   :ret (s/int-in -2425 2426))
 
-;;;INSTANT
-(defn instant$
-  "Returns an instant literal of now. Loses precision below millisecond."
+;;;INST
+(defn inst$
+  "Returns an ::inst of now. Loses precision below millisecond."
   []
   (Date.))
 
-(s/fdef instant$
+(s/fdef inst$
   :args (s/cat)
-  :ret ::instant)
+  :ret ::inst)
 
-(defn instant->instant-ms
-  "Converts `instant` to ::instant-ms."
-  [instant]
-  (inst-ms instant))
+(defn inst->in-ms
+  "Converts `inst` to ::in-ms."
+  [inst]
+  (inst-ms inst))
 
-(s/fdef instant->instant-ms
-  :args (s/cat :instant ::instant)
-  :ret ::instant-ms)
+(s/fdef inst->in-ms
+  :args (s/cat :inst ::inst)
+  :ret ::in-ms)
 
-;;;INSTANT-MS
-(defn instant-ms$
-  "Returns an ::instant-ms of now. Loses precision below millisecond."
+(defn bound-java-date->inst
+  "Bound `java-date` to ::inst range (#inst\"0001-01-01T00:00:00.000-00:00\"
+  to #inst\"9999-12-31T23:59:59.999-00:00\"."
+  [java-date]
+  (cond (.before ^Date java-date #inst"0001-01-01T00:00:00.000-00:00")
+        #inst"0001-01-01T00:00:00.000-00:00"
+
+        (.after ^Date java-date #inst"9999-12-31T23:59:59.999-00:00")
+        #inst"9999-12-31T23:59:59.999-00:00"
+
+        :else java-date))
+
+(s/fdef bound-java-date->inst
+  :args (s/cat :java-date ::java-date)
+  :ret ::inst)
+
+;;;IN-MS
+(defn in-ms$
+  "Returns an ::in-ms of now. Loses precision below millisecond."
   []
-  (.getTime ^Date (instant$)))
+  (.getTime ^Date (inst$)))
 
-(s/fdef instant-ms$
+(s/fdef in-ms$
   :args (s/cat)
-  :ret ::instant-ms)
+  :ret ::in-ms)
 
-(defn instant-ms->instant
-  "Converts `instant-ms` to ::instant."
-  [instant-ms]
-  (Date. ^long instant-ms))
+(defn in-ms->inst
+  "Converts `in-ms` to ::inst."
+  [in-ms]
+  (Date. ^long in-ms))
 
-(s/fdef instant-ms->instant
-  :args (s/cat :instant-ms ::instant-ms)
-  :ret ::instant)
+(s/fdef in-ms->inst
+  :args (s/cat :in-ms ::in-ms)
+  :ret ::inst)
+
+(defn bound-ms->in-ms
+  "Bound `ms` to ::in-ms range."
+  [ms]
+  (intervals/bound-by-interval [-62135769600000 253402300799999] ms))
+
+(s/fdef bound-ms->in-ms
+  :args (s/cat :ms ::m/long)
+  :ret ::in-ms)
 
 ;;;PERIODS
-(defn instant-ms->period
-  "Returns period (in average-years) from `instant-ms`."
-  [instant-ms]
-  (/ instant-ms (double ms-per-average-year)))
+(defn in-ms->period
+  "Returns period (in average-years) from `in-ms`."
+  [in-ms]
+  (/ in-ms (double ms-per-average-year)))
 
-(s/fdef instant-ms->period
-  :args (s/cat :instant-ms ::instant-ms)
+(s/fdef in-ms->period
+  :args (s/cat :in-ms ::in-ms)
   :ret ::period)
 
-(defn instant-interval->period
-  "Returns period from `instant-interval`."
+(defn inst-interval->period
+  "Returns period from `inst-interval`."
   [instant-interval]
-  (/ (- (instant->instant-ms (second instant-interval))
-        (double (instant->instant-ms (first instant-interval))))
+  (/ (- (inst->in-ms (second instant-interval))
+        (double (inst->in-ms (first instant-interval))))
      ms-per-average-year))
 
-(s/fdef instant-interval->period
-  :args (s/cat :instant-interval ::instant-interval)
+(s/fdef inst-interval->period
+  :args (s/cat :inst-interval ::inst-interval)
   :ret (s/and ::period m/non-?))
 

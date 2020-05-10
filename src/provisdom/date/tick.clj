@@ -86,20 +86,18 @@
 (s/def ::ticks-in-month
   (s/int-in (* 28 ticks-per-day) (inc (* 31 ticks-per-day))))
 
+;;instant-ms stays in date range 1814-2325
 (s/def ::instant-ms (s/int-in -4906628144104 11218148144105))
 
 (defn- instant-in-range?
   [instant]
   (intervals/in-interval? [-4906628144104 11218148144104]
-                          (instant/instant->instant-ms instant)))
+                          (instant/inst->in-ms instant)))
 
+;;instant stays in date range 1814-2325
 (s/def ::instant
-  (s/with-gen (s/and inst? instant-in-range?)
-              #(gen/fmap instant/instant-ms->instant (s/gen ::instant-ms))))
-
-(s/def ::instant-interval
-  (s/and (s/tuple ::instant ::instant)
-         instant/first-instant-not-after-second?))
+  (s/with-gen (s/and ::instant/java-date instant-in-range?)
+              #(gen/fmap instant/in-ms->inst (s/gen ::instant-ms))))
 
 (def time-breakdown-all
   [::hours ::minutes ::seconds ::ms ::us ::ticks])
@@ -186,6 +184,15 @@
   :args (s/cat :instant-ms ::instant-ms)
   :ret ::date)
 
+(defn bound-ms->instant-ms
+  "Bound `ms` to ::instant-ms range."
+  [ms]
+  (intervals/bound-by-interval [-4906628144104 11218148144104] ms))
+
+(s/fdef bound-ms->instant-ms
+  :args (s/cat :ms ::m/long)
+  :ret ::instant-ms)
+
 ;;;INSTANT
 (defn date->instant
   "Returns an instant. Loses precision below millisecond."
@@ -199,11 +206,27 @@
 (defn instant->date
   "Converts an `instant` to a date."
   [instant]
-  (instant-ms->date (instant/instant->instant-ms instant)))
+  (instant-ms->date (instant/inst->in-ms instant)))
 
 (s/fdef instant->date
   :args (s/cat :instant ::instant)
   :ret ::date)
+
+(defn bound-java-date->instant
+  "Bound `java-date` to ::instant range (#inst\"1814-07-08T07:44:15.896-00:00\"
+  to #inst\"2325-06-28T16:15:44.104-00:00\"."
+  [java-date]
+  (cond (.before ^Date java-date #inst"1814-07-08T07:44:15.896-00:00")
+        #inst"1814-07-08T07:44:15.896-00:00"
+
+        (.after ^Date java-date #inst"2325-06-28T16:15:44.104-00:00")
+        #inst"2325-06-28T16:15:44.104-00:00"
+
+        :else java-date))
+
+(s/fdef bound-java-date->instant
+  :args (s/cat :java-date ::instant/java-date)
+  :ret ::instant)
 
 ;;;TIME
 (defn- parse-time
@@ -430,7 +453,7 @@
 (defn date$
   "Now, returned to the nearest millisecond."
   []
-  (instant->date (instant/instant$)))
+  (instant->date (instant/inst$)))
 
 (defn date->breakdown
   "A `date` can be broken down as a map of the keys ::year, ::month,
@@ -770,36 +793,6 @@
 
 (s/fdef last-day-of-month?
   :args (s/cat :date ::date)
-  :ret boolean?)
-
-(defn date-range?
-  "Returns true if `x` is a ::date-range. "
-  [x]
-  (and (sequential? x)
-       (= 2 (count x))
-       (m/long? (first x))
-       (m/long? (second x))))
-
-(s/fdef date-range?
-  :args (s/cat :x any?)
-  :ret boolean?)
-
-(defn date-interval?
-  "Returns true if `x` is a ::date-interval. "
-  [x]
-  (and (date-range? x) (<= (first x) (second x))))
-
-(s/fdef date-interval?
-  :args (s/cat :x any?)
-  :ret boolean?)
-
-(defn strict-date-interval?
-  "Returns true if `x` is a ::strict-date-interval."
-  [x]
-  (and (date-range? x) (< (first x) (second x))))
-
-(s/fdef strict-date-interval?
-  :args (s/cat :x any?)
   :ret boolean?)
 
 (defn same-day?

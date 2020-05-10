@@ -4,9 +4,10 @@
     [provisdom.test.core :refer :all]
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
-    [provisdom.date.instant :as instant]))
+    [provisdom.date.instant :as instant]
+    [provisdom.math.core :as m]))
 
-;1 seconds
+;2 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -54,54 +55,69 @@
   (is= -24 (instant/passed-leap-days [2000 1] [1900 3]))
   (is= -24 (instant/passed-leap-days [2000 1] [1900 1])))
 
-;;;INSTANT
-#_(deftest instant$-test
-  (is (spec-check instant/instant$))
-  (is= #inst "2020-05-05T20:57:50.661-00:00"
-         (instant/instant$)))
+;;;INST
+#_(deftest inst$-test
+    (is (spec-check instant/inst$))
+    (is= #inst "2020-05-05T20:57:50.661-00:00"
+         (instant/inst$)))
 
-(deftest instant->instant-ms-test
-  (is (spec-check instant/instant->instant-ms))
+(deftest inst->in-ms-test
+  (is (spec-check instant/inst->in-ms))
   (is= 3155760000000
-       (instant/instant->instant-ms #inst"2070-01-01T00:00:00.000-00:00"))
+       (instant/inst->in-ms #inst"2070-01-01T00:00:00.000-00:00"))
   (is= 0
-       (instant/instant->instant-ms #inst"1970-01-01T00:00:00.000-00:00"))
+       (instant/inst->in-ms #inst"1970-01-01T00:00:00.000-00:00"))
   (is= -62135769600000
-       (instant/instant->instant-ms #inst"0001-01-01T00:00:00.000-00:00"))
+       (instant/inst->in-ms #inst"0001-01-01T00:00:00.000-00:00"))
   (is= 253402300799999
-       (instant/instant->instant-ms #inst"9999-12-31T23:59:59.999-00:00")))
+       (instant/inst->in-ms #inst"9999-12-31T23:59:59.999-00:00")))
 
-;;;INSTANT-MS
-#_(deftest instant-ms$-test
-  (is (spec-check instant/instant-ms$))
-  (is= 1588705104037 (instant/instant-ms$)))
-
-(deftest instant-ms->instant-test
-  (is (spec-check instant/instant-ms->instant))
+(deftest bound-java-date->inst-test
+  (is (spec-check instant/bound-java-date->inst))
+  (is= #inst"0000-01-01T00:00:00.000-00:00"
+       (instant/bound-java-date->inst #inst"0000-01-01T00:00:00.000-00:00"))
+  (is= #inst"9999-12-31T23:59:59.999-00:00"
+       (instant/bound-java-date->inst #inst"9999-12-31T23:59:59.999-00:00"))
   (is= #inst"2070-01-01T00:00:00.000-00:00"
-       (instant/instant-ms->instant 3155760000000))
+       (instant/bound-java-date->inst #inst"2070-01-01T00:00:00.000-00:00")))
+
+;;;IN-MS
+#_(deftest in-ms$-test
+  (is (spec-check instant/in-ms$))
+  (is= 1588705104037 (instant/in-ms$)))
+
+(deftest in-ms->inst-test
+  (is (spec-check instant/in-ms->inst))
+  (is= #inst"2070-01-01T00:00:00.000-00:00"
+       (instant/in-ms->inst 3155760000000))
   (is= #inst"1970-01-01T00:00:00.000-00:00"
-       (instant/instant-ms->instant 0))
+       (instant/in-ms->inst 0))
   (is= #inst"0001-01-01T00:00:00.000-00:00"
-       (instant/instant-ms->instant -62135769600000))
-  (is= #inst "9999-12-31T23:59:59.999-00:00"
-       (instant/instant-ms->instant 253402300799999)))
+       (instant/in-ms->inst -62135769600000))
+  (is= #inst"9999-12-31T23:59:59.999-00:00"
+       (instant/in-ms->inst 253402300799999)))
+
+(deftest bound-ms->in-ms-test
+  (is (spec-check instant/bound-ms->in-ms))
+  (is= -62135769600000 (instant/bound-ms->in-ms m/min-long))
+  (is= 253402300799999 (instant/bound-ms->in-ms m/max-long))
+  (is= 0 (instant/bound-ms->in-ms 0)))
 
 ;;;PERIODS
-(deftest instant-ms->period-test
-  (is (spec-check instant/instant-ms->period))
+(deftest in-ms->period-test
+  (is (spec-check instant/in-ms->period))
   (is= 9.342597625683242
-       (instant/instant-ms->period 294823904829))
+       (instant/in-ms->period 294823904829))
   (is= -7.839309068885994E-5
-       (instant/instant-ms->period -2473847)))
+       (instant/in-ms->period -2473847)))
 
-(deftest instant-interval->period-test
-  (is (spec-check instant/instant-interval->period))
+(deftest inst-interval->period-test
+  (is (spec-check instant/inst-interval->period))
   (is= 3.901584981971643E-4
-       (instant/instant-interval->period
-         [(instant/instant-ms->instant 29029)
-          (instant/instant-ms->instant 12341242)]))
+       (instant/inst-interval->period
+         [(instant/in-ms->inst 29029)
+          (instant/in-ms->inst 12341242)]))
   (is= 3.919982829773927E-4
-       (instant/instant-interval->period
-         [(instant/instant-ms->instant -29029)
-          (instant/instant-ms->instant 12341242)])))
+       (instant/inst-interval->period
+         [(instant/in-ms->inst -29029)
+          (instant/in-ms->inst 12341242)])))
