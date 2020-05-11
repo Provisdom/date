@@ -7,7 +7,7 @@
     [provisdom.date.tick :as tick]
     [provisdom.math.core :as m]))
 
-;22 seconds
+;18 seconds
 
 (set! *warn-on-reflection* true)
 

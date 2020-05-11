@@ -31,6 +31,10 @@
 (def ^:const ms-per-minute "60000" 60000)
 (def ^:const ms-per-second "1000" 1000)
 (def ^:const minutes-per-day 1440)
+(def ^:const min-in-ms -62135769600000)
+(def ^:const max-in-ms 253402300799999)
+(def ^:const min-inst #inst"0001-01-01T00:00:00.000-00:00")
+(def ^:const max-inst #inst"9999-12-31T23:59:59.999-00:00")
 
 (def ^:const ^:private non-leap-year-days-per-month
   [31 28 31 30 31 30 31 31 30 31 30 31])
@@ -71,12 +75,11 @@
 
 ;;for compatibility with ticks, use ::tick/instant-ms
 ;;::in-ms keeps the inst in the range 0 to <10K years
-(s/def ::in-ms (s/int-in -62135769600000 253402300800000))
+(s/def ::in-ms (s/int-in min-in-ms (inc max-in-ms)))
 
 (defn- inst-in-range?
   [inst]
-  (intervals/in-interval? [-62135769600000 253402300799999]
-                          (inst->in-ms inst)))
+  (intervals/in-interval? [min-in-ms max-in-ms] (inst->in-ms inst)))
 
 (s/def ::java-date inst?)
 
@@ -175,12 +178,8 @@
   "Bound `java-date` to ::inst range (#inst\"0001-01-01T00:00:00.000-00:00\"
   to #inst\"9999-12-31T23:59:59.999-00:00\"."
   [java-date]
-  (cond (.before ^Date java-date #inst"0001-01-01T00:00:00.000-00:00")
-        #inst"0001-01-01T00:00:00.000-00:00"
-
-        (.after ^Date java-date #inst"9999-12-31T23:59:59.999-00:00")
-        #inst"9999-12-31T23:59:59.999-00:00"
-
+  (cond (.before ^Date java-date min-inst) min-inst
+        (.after ^Date java-date max-inst) max-inst
         :else java-date))
 
 (s/fdef bound-java-date->inst
@@ -209,7 +208,7 @@
 (defn bound-ms->in-ms
   "Bound `ms` to ::in-ms range."
   [ms]
-  (intervals/bound-by-interval [-62135769600000 253402300799999] ms))
+  (intervals/bound-by-interval [min-in-ms max-in-ms] ms))
 
 (s/fdef bound-ms->in-ms
   :args (s/cat :ms ::m/long)

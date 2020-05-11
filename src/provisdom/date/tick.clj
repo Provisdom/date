@@ -62,6 +62,10 @@
 (def ^:const ticks-per-second "1144000000" 1144000000)
 (def ^:const ticks-per-ms "millisecond: 1144000" 1144000)
 (def ^:const ticks-per-us "microsecond: 1144" 1144)
+(def ^:const min-instant-ms -4906628144104)
+(def ^:const max-instant-ms 11218148144104)
+(def ^:const min-instant #inst"1814-07-08T07:44:15.896-00:00")
+(def ^:const max-instant #inst"2325-06-28T16:15:44.104-00:00")
 
 (s/def ::ticks ::m/long)                                    ;;1/1144 of a microsecond
 (s/def ::date ::m/long)                                     ;;ticks from epoch
@@ -84,14 +88,17 @@
 (s/def ::seconds-fraction-precision (s/int-in 0 16))        ;;formatting fractions of a second
 
 (s/def ::ticks-in-month
-  (s/int-in (* 28 ticks-per-day) (inc (* 31 ticks-per-day))))
+  #{(* 28 ticks-per-day)
+    (* 29 ticks-per-day)
+    (* 30 ticks-per-day)
+    (* 31 ticks-per-day)})
 
 ;;instant-ms stays in date range 1814-2325
-(s/def ::instant-ms (s/int-in -4906628144104 11218148144105))
+(s/def ::instant-ms (s/int-in min-instant-ms (inc max-instant-ms)))
 
 (defn- instant-in-range?
   [instant]
-  (intervals/in-interval? [-4906628144104 11218148144104]
+  (intervals/in-interval? [min-instant-ms max-instant-ms]
                           (instant/inst->in-ms instant)))
 
 ;;instant stays in date range 1814-2325
@@ -176,8 +183,8 @@
   "Converts `instant-ms` to ::date."
   [instant-ms]
   (condp = instant-ms
-    -4906628144104 m/min-long
-    11218148144104 m/max-long
+    min-instant-ms m/min-long
+    max-instant-ms m/max-long
     (* ticks-per-ms (+ (/ date-1970 ticks-per-ms) instant-ms))))
 
 (s/fdef instant-ms->date
@@ -187,7 +194,7 @@
 (defn bound-ms->instant-ms
   "Bound `ms` to ::instant-ms range."
   [ms]
-  (intervals/bound-by-interval [-4906628144104 11218148144104] ms))
+  (intervals/bound-by-interval [min-instant-ms max-instant-ms] ms))
 
 (s/fdef bound-ms->instant-ms
   :args (s/cat :ms ::m/long)
@@ -216,12 +223,8 @@
   "Bound `java-date` to ::instant range (#inst\"1814-07-08T07:44:15.896-00:00\"
   to #inst\"2325-06-28T16:15:44.104-00:00\"."
   [java-date]
-  (cond (.before ^Date java-date #inst"1814-07-08T07:44:15.896-00:00")
-        #inst"1814-07-08T07:44:15.896-00:00"
-
-        (.after ^Date java-date #inst"2325-06-28T16:15:44.104-00:00")
-        #inst"2325-06-28T16:15:44.104-00:00"
-
+  (cond (.before ^Date java-date min-instant) min-instant
+        (.after ^Date java-date max-instant) max-instant
         :else java-date))
 
 (s/fdef bound-java-date->instant
@@ -573,18 +576,13 @@
         month (read-number s2 anomaly 1)
         day-of-month (read-number s3 anomaly 0)
         ticks (when s4 (parse-time s4))
-        not-all-longs? (some false?
-                             (map m/long? [year month day-of-month ticks]))]
-    (if not-all-longs?
-      anomaly
-      (if (and (intervals/in-interval? [1814 2325] year)
-               (intervals/in-interval? [1 12] month)
-               (intervals/in-interval? [1 31] day-of-month))
-        (breakdown->date {::year         year
-                          ::month        month
-                          ::day-of-month day-of-month
-                          ::ticks        ticks})
-        anomaly))))
+        bd {::year         year
+            ::month        month
+            ::day-of-month day-of-month
+            ::ticks        ticks}]
+    (if (date-breakdown? bd)
+      (breakdown->date bd)
+      anomaly)))
 
 (s/fdef parse-date
   :args (s/cat :date-string string?)
