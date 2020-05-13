@@ -5,13 +5,35 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.date.tick :as tick]
-    [provisdom.math.core :as m]))
+    [provisdom.math.core :as m])
+  (:import (java.time Duration)))
 
-;18 seconds
+;19 seconds
 
 (set! *warn-on-reflection* true)
 
 (ost/instrument)
+
+;;;JAVA-DURATION
+(deftest ticks->java-duration-test
+  (is (spec-check tick/ticks->java-duration))
+  (is= Duration/ZERO
+       (tick/ticks->java-duration 0))
+  (is= (Duration/ofNanos tick/min-nanos)
+       (tick/ticks->java-duration m/min-long))
+  (is= (Duration/ofNanos tick/max-nanos)
+       (tick/ticks->java-duration m/max-long)))
+
+(deftest bound-java-duration->ticks-test
+  (is (spec-check tick/bound-java-duration->ticks))
+  (is= 0
+       (tick/bound-java-duration->ticks Duration/ZERO))
+  (is= m/min-long
+       (tick/bound-java-duration->ticks (Duration/ofNanos tick/min-nanos)))
+  (is= m/max-long
+       (tick/bound-java-duration->ticks (Duration/ofNanos tick/max-nanos)))
+  (is= m/max-long
+       (tick/bound-java-duration->ticks (Duration/ofNanos m/max-long))))
 
 ;;;INSTANT-MS
 (deftest date->instant-ms-test

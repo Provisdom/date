@@ -6,12 +6,15 @@
     [orchestra.spec.test :as ost]
     [clojure.string :as str]
     [clojure.set :as set]
+    [clojure.data.int-map :as int-map]
+    [clojure.core.reducers :as reducers]
     [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.utility-belt.strings :as strings]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals]
     [provisdom.date.instant :as instant])
-  (:import (java.util Date)))
+  (:import (java.util Date)
+           (java.time Duration)))
 
 ;;;;This namespace was created to handle dates and durations in an easy and
 ;;;; intuitive manner.
@@ -46,7 +49,7 @@
 ;;;; and
 ;;;;   146097*24*60*60*1000000*11*13*8=ticks in 400 years
 
-(declare breakdown->ticks breakdown->months)
+(declare breakdown->ticks breakdown->months ticks->java-duration)
 
 (def ^:const date-1970 -3610189440000000000)
 (def ^:const date-2020 -1805144140800000000)
@@ -66,6 +69,8 @@
 (def ^:const max-instant-ms 11218148144104)
 (def ^:const min-instant #inst"1814-07-08T07:44:15.896-00:00")
 (def ^:const max-instant #inst"2325-06-28T16:15:44.104-00:00")
+(def ^:const max-nanos 8062388144103825408)
+(def ^:const min-nanos -8062388144103825408)
 
 (s/def ::ticks ::m/long)                                    ;;1/1144 of a microsecond
 (s/def ::date ::m/long)                                     ;;ticks from epoch
@@ -86,6 +91,10 @@
 (s/def ::date-interval ::intervals/long-interval)
 (s/def ::strict-date-interval (intervals/strict-interval-spec ::m/date))
 (s/def ::seconds-fraction-precision (s/int-in 0 16))        ;;formatting fractions of a second
+
+(s/def ::java-duration
+  (s/with-gen (partial instance? Duration)
+              #(gen/fmap ticks->java-duration (s/gen ::ticks))))
 
 (s/def ::ticks-in-month
   #{(* 28 ticks-per-day)
@@ -168,6 +177,30 @@
   [:sunday :monday :tuesday :wednesday :thursday :friday :saturday])
 
 (s/def ::day-of-week (set days-of-week))
+
+;;;JAVA DURATION
+(defn ticks->java-duration
+  "Rounded to the nearest nanosecond. A java-duration consists of nanoseconds,
+  and there are 1.144 ticks in a nanosecond."
+  [ticks]
+  (Duration/ofNanos (m/round (* 1000 (/ ticks ticks-per-us)) :up)))
+
+(s/fdef ticks->java-duration
+  :args (s/cat :ticks ::ticks)
+  :ret ::java-duration)
+
+(defn bound-java-duration->ticks
+  "Bounded to tick range (long) and rounded to nearest tick. A java-duration
+  consists of nanoseconds, and there are 1.144 ticks in a nanosecond."
+  [java-duration]
+  (let [nanos (.getNano ^Duration java-duration)
+        seconds (.getSeconds ^Duration java-duration)
+        ticks (+' (*' seconds ticks-per-second) (* (/ nanos 1000) ticks-per-us))]
+    (m/round (intervals/bound-by-interval [m/min-long m/max-long] ticks) :up)))
+
+(s/fdef bound-java-duration->ticks
+  :args (s/cat :java-duration ::java-duration)
+  :ret ::ticks)
 
 ;;;INSTANT-MS
 (defn date->instant-ms
