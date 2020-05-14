@@ -49,15 +49,48 @@
   ([date v] (int-map/int-map date v))
   ([date v & rest] (apply int-map/int-map date v rest)))
 
-(defn into-date-map
-  "Fast 'into' function for date-map."
-  [date-value-pairs]
-  (reducers/fold int-map/merge conj date-value-pairs))
+(defn date-value-pairs->date-map
+  "Convert `date-value-pairs` to a date-map. Can optionally include a
+  `date-value-pair-f` and `date-value-pair-filterf` (applied at the end). For
+  more flexibility, use (reducers/fold [[map-merge]] reducef coll)."
+  ([date-value-pairs]
+   (reducers/fold int-map/merge conj date-value-pairs))
+  ([date-value-pair-f date-value-pairs]
+   (reducers/fold int-map/merge
+                  (fn [acc date-value-pair]
+                    (conj acc (date-value-pair-f date-value-pair)))
+                  date-value-pairs))
+  ([date-value-pair-filterf date-value-pair-f date-value-pairs]
+   (reducers/fold int-map/merge
+                  (fn [acc date-value-pair]
+                    (let [v (date-value-pair-f date-value-pair)]
+                      (if (date-value-pair-filterf v)
+                        (conj acc v)
+                        acc)))
+                  date-value-pairs)))
 
 (defn map->date-map
-  "Convert map of dates to a date-map."
-  [m]
-  (into-date-map (map identity m)))
+  "Convert map of dates to a date-map. Can optionally include a
+  `date-value-pair-f` and `date-value-pair-filterf` (applied at the end). For
+  more flexibility, use (reducers/fold [[map-merge]] reducef coll)."
+  ([m]
+   (reducers/fold int-map/merge
+                  (fn [acc k v]
+                    (conj acc [k v]))
+                  m))
+  ([date-value-pair-f m]
+   (reducers/fold int-map/merge
+                  (fn [acc k v]
+                    (conj acc (date-value-pair-f [k v])))
+                  m))
+  ([date-value-pair-filterf date-value-pair-f m]
+   (reducers/fold int-map/merge
+                  (fn [acc k v]
+                    (let [v (date-value-pair-f [k v])]
+                      (if (date-value-pair-filterf v)
+                        (conj acc v)
+                        acc)))
+                  m)))
 
 (defn map-merge
   "Merges together two date-maps, giving precedence to values from the
