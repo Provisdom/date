@@ -5,12 +5,43 @@
     [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [clojure.data.int-map :as int-map]
-    [clojure.core.reducers :as reducers]))
+    [clojure.core.reducers :as reducers]
+    [provisdom.date.tick :as tick])
+  (:import (clojure.data.int_map PersistentIntMap
+                                 PersistentIntSet)))
 
 ;;;;This namespace was created to wrap the clojure.data.int-map ns for use with
-;;;; dates (and ticks) -- mostly to help remember to use it. The collections in
-;;;; this ns have the possibility to be significantly faster than normal sorted
-;;;; collections.  See https://github.com/clojure/data.int-map.
+;;;; dates (and ticks) -- mostly to help remember to use it. The two collections
+;;;; in this ns (date-map and date-set) have the possibility to be significantly
+;;;; faster than normal sorted collections. A dense date set is a special type
+;;;; of date set.
+;;;; See https://github.com/clojure/data.int-map.
+
+(declare date-set? date-map? map->date-map)
+
+(defmacro date-map-of
+  [vpred & opts]
+  (let [sform `(s/map-of ::tick/date ~vpred ~@opts)
+        xform `(s/and ~sform date-map?)]
+    `(s/with-gen
+       ~xform
+       #(gen/fmap map->date-map (s/gen ~sform)))))
+
+(s/def ::date-set
+  (s/coll-of ::tick/date
+             :into (int-map/int-set)
+             :kind date-set?))
+
+(s/def ::dense-date-set
+  (s/coll-of ::tick/date
+             :into (int-map/dense-int-set)
+             :kind date-set?))
+
+;;;DATE MAP
+(defn date-map?
+  "Checks whether `x` is a ::date-map."
+  [x]
+  (instance? PersistentIntMap x))
 
 (defn date-map
   "Creates a date map that can only have dates (ticks, longs) as keys."
@@ -19,10 +50,14 @@
   ([date v & rest] (apply int-map/int-map date v rest)))
 
 (defn into-date-map
-  "Fast 'into' function for date-map. `entries` can be a vector or a hash-map
-  for fastest performance."
-  [entries]
-  (reducers/fold int-map/merge conj entries))
+  "Fast 'into' function for date-map."
+  [date-value-pairs]
+  (reducers/fold int-map/merge conj date-value-pairs))
+
+(defn map->date-map
+  "Convert map of dates to a date-map."
+  [m]
+  (into-date-map (map identity m)))
 
 (defn map-merge
   "Merges together two date-maps, giving precedence to values from the
@@ -48,6 +83,12 @@
   "A transient variant of [[map-update]]."
   ([date-map date f] (int-map/update! date-map date f))
   ([date-map date f & args] (apply int-map/update! date-map date f args)))
+
+;;;DATE SET
+(defn date-set?
+  "Checks whether `x` is a ::date-set."
+  [x]
+  (instance? PersistentIntSet x))
 
 (defn date-set
   "Use [[dense-date-set]] where the elements are densely clustered (each element
