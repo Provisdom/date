@@ -14,10 +14,12 @@
 ;;;; dates (and ticks) -- mostly to help remember to use it. The two collections
 ;;;; in this ns (date-map and date-set) have the possibility to be significantly
 ;;;; faster than normal sorted collections. A dense date set is a special type
-;;;; of date set.
+;;;; of date set. [[map-merge]] is fast, so you can use
+;;;; (reducers/fold [[map-merge]] reducef coll) for fast parallelism of creating
+;;;; and manipulating date-maps.
 ;;;; See https://github.com/clojure/data.int-map.
 
-(declare date-set? date-map? map->date-map)
+(declare date-set? date-map?)
 
 (defmacro date-map-of
   [vpred & opts]
@@ -25,7 +27,8 @@
         xform `(s/and ~sform date-map?)]
     `(s/with-gen
        ~xform
-       #(gen/fmap map->date-map (s/gen ~sform)))))
+       #(gen/fmap (partial into (int-map/int-map))
+                  (s/gen ~sform)))))
 
 (s/def ::date-set
   (s/coll-of ::tick/date
@@ -48,49 +51,6 @@
   ([] (int-map/int-map))
   ([date v] (int-map/int-map date v))
   ([date v & rest] (apply int-map/int-map date v rest)))
-
-(defn date-value-pairs->date-map
-  "Convert `date-value-pairs` to a date-map. Can optionally include a
-  `date-value-pair-f` and `date-value-pair-filterf` (applied at the end). For
-  more flexibility, use (reducers/fold [[map-merge]] reducef coll)."
-  ([date-value-pairs]
-   (reducers/fold int-map/merge conj date-value-pairs))
-  ([date-value-pair-f date-value-pairs]
-   (reducers/fold int-map/merge
-                  (fn [acc date-value-pair]
-                    (conj acc (date-value-pair-f date-value-pair)))
-                  date-value-pairs))
-  ([date-value-pair-filterf date-value-pair-f date-value-pairs]
-   (reducers/fold int-map/merge
-                  (fn [acc date-value-pair]
-                    (let [v (date-value-pair-f date-value-pair)]
-                      (if (date-value-pair-filterf v)
-                        (conj acc v)
-                        acc)))
-                  date-value-pairs)))
-
-(defn map->date-map
-  "Convert map of dates to a date-map. Can optionally include a
-  `date-value-pair-f` and `date-value-pair-filterf` (applied at the end). For
-  more flexibility, use (reducers/fold [[map-merge]] reducef coll)."
-  ([m]
-   (reducers/fold int-map/merge
-                  (fn [acc k v]
-                    (conj acc [k v]))
-                  m))
-  ([date-value-pair-f m]
-   (reducers/fold int-map/merge
-                  (fn [acc k v]
-                    (conj acc (date-value-pair-f [k v])))
-                  m))
-  ([date-value-pair-filterf date-value-pair-f m]
-   (reducers/fold int-map/merge
-                  (fn [acc k v]
-                    (let [v (date-value-pair-f [k v])]
-                      (if (date-value-pair-filterf v)
-                        (conj acc v)
-                        acc)))
-                  m)))
 
 (defn map-merge
   "Merges together two date-maps, giving precedence to values from the
