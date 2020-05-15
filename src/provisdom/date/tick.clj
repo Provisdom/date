@@ -72,7 +72,7 @@
 
 (s/def ::ticks ::m/long)                                    ;;1/1144 of a microsecond
 (s/def ::ticks+ ::m/long+)
-(s/def ::ticks-non- ::m/lon-non-)
+(s/def ::ticks-non- ::m/long-non-)
 (s/def ::date ::m/long)                                     ;;ticks from epoch
 (s/def ::year (s/int-in 1814 2326))
 (s/def ::month (s/int-in 1 13))
