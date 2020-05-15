@@ -246,6 +246,15 @@
          #::tick{:us    0, :month 3, :seconds 0, :day-of-month 1, :year 2024,
                  :hours 0, :ticks 0, :minutes 0, :ms 0})))
 
+(deftest bound-java-date->date-test
+  (is (spec-check tick/bound-java-date->date))
+  (is= m/min-long
+       (tick/bound-java-date->date #inst"0000-01-01T00:00:00.000-00:00"))
+  (is= m/max-long
+       (tick/bound-java-date->date #inst"9999-12-31T23:59:59.999-00:00"))
+  (is= tick/date-2070
+       (tick/bound-java-date->date #inst"2070-01-01T00:00:00.000-00:00")))
+
 (deftest date-breakdown?-test
   (is (spec-check tick/date-breakdown?))
   (is (tick/date-breakdown?

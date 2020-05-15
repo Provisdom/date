@@ -6,8 +6,6 @@
     [orchestra.spec.test :as ost]
     [clojure.string :as str]
     [clojure.set :as set]
-    [clojure.data.int-map :as int-map]
-    [clojure.core.reducers :as reducers]
     [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.utility-belt.strings :as strings]
     [provisdom.math.core :as m]
@@ -73,6 +71,8 @@
 (def ^:const min-nanos -8062388144103825408)
 
 (s/def ::ticks ::m/long)                                    ;;1/1144 of a microsecond
+(s/def ::ticks+ ::m/long+)
+(s/def ::ticks-non- ::m/lon-non-)
 (s/def ::date ::m/long)                                     ;;ticks from epoch
 (s/def ::year (s/int-in 1814 2326))
 (s/def ::month (s/int-in 1 13))
@@ -555,6 +555,16 @@
 
 (s/fdef breakdown->date
   :args (s/cat :date-breakdown ::date-breakdown)
+  :ret ::date)
+
+(defn bound-java-date->date
+  "Bound `java-date` to ::date range (#inst\"1814-07-08T07:44:15.896-00:00\"
+  to #inst\"2325-06-28T16:15:44.104-00:00\"."
+  [java-date]
+  (instant->date (bound-java-date->instant java-date)))
+
+(s/fdef bound-java-date->date
+  :args (s/cat :java-date ::instant/java-date)
   :ret ::date)
 
 (defn date-breakdown?
