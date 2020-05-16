@@ -667,34 +667,119 @@
 (defn start-of-year
   "Returns start of year of `date`."
   [date]
-  (breakdown->date
-    (assoc (dissoc (date->breakdown date #{}) ::ticks)
-      ::month 1
-      ::day-of-month 1)))
+  (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks)
+             ::month 1
+             ::day-of-month 1)]
+    (if (date-breakdown? date-breakdown)
+      (breakdown->date date-breakdown)
+      {::anomalies/fn       (var start-of-year)
+       ::anomalies/message  "not a valid date"
+       ::anomalies/category ::anomalies/exception})))
 
 (s/fdef start-of-year
   :args (s/cat :date ::date)
-  :ret ::date)
+  :ret (s/or :date ::date
+             :anomaly ::anomalies/anomaly))
+
+(defn end-of-year
+  "Returns end of year of `date`."
+  [date]
+  (let [date-breakdown (update
+                         (assoc (dissoc (date->breakdown date #{}) ::ticks)
+                           ::month 1
+                           ::day-of-month 1)
+                         ::year
+                         inc)]
+    (if (date-breakdown? date-breakdown)
+      (breakdown->date date-breakdown)
+      {::anomalies/fn       (var end-of-year)
+       ::anomalies/message  "not a valid date"
+       ::anomalies/category ::anomalies/exception})))
+
+(s/fdef end-of-year
+  :args (s/cat :date ::date)
+  :ret (s/or :date ::date
+             :anomaly ::anomalies/anomaly))
 
 (defn start-of-month
   "Returns start of month of `date`."
   [date]
-  (breakdown->date
-    (assoc (dissoc (date->breakdown date #{}) ::ticks)
-      ::day-of-month 1)))
+  (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks)
+                         ::day-of-month 1)]
+    (if (date-breakdown? date-breakdown)
+      (breakdown->date date-breakdown)
+      {::anomalies/fn       (var start-of-month)
+       ::anomalies/message  "not a valid date"
+       ::anomalies/category ::anomalies/exception})))
 
 (s/fdef start-of-month
   :args (s/cat :date ::date)
-  :ret ::date)
+  :ret (s/or :date ::date
+             :anomaly ::anomalies/anomaly))
+
+(defn end-of-month
+  "Returns end of month of `date`."
+  [date]
+  (let [{::keys [year month]
+         :as    date-breakdown} (date->breakdown date #{})
+        [year month] (if (= month 12)
+                       [(inc year) 1]
+                       [year (inc month)])
+        date-breakdown (assoc (dissoc date-breakdown ::ticks)
+                         ::year year
+                         ::month month
+                         ::day-of-month 1)]
+    (if (date-breakdown? date-breakdown)
+      (breakdown->date date-breakdown)
+      {::anomalies/fn       (var end-of-month)
+       ::anomalies/message  "not a valid date"
+       ::anomalies/category ::anomalies/exception})))
+
+(s/fdef end-of-month
+  :args (s/cat :date ::date)
+  :ret (s/or :date ::date
+             :anomaly ::anomalies/anomaly))
 
 (defn start-of-day
   "Returns start of day of `date`."
   [date]
-  (breakdown->date (dissoc (date->breakdown date #{}) ::ticks)))
+  (let [bd (dissoc (date->breakdown date #{}) ::ticks)]
+    (if (date-breakdown? bd)
+      (breakdown->date bd)
+      {::anomalies/fn       (var start-of-day)
+       ::anomalies/message  "not a valid date"
+       ::anomalies/category ::anomalies/exception})))
 
 (s/fdef start-of-day
   :args (s/cat :date ::date)
-  :ret ::date)
+  :ret (s/or :date ::date
+             :anomaly ::anomalies/anomaly))
+
+(defn end-of-day
+  "Returns end of day of `date`."
+  [date]
+  (let [{::keys [year month day-of-month]
+         :as    date-breakdown} (date->breakdown date #{})
+        [month day-of-month] (if (= day-of-month (instant/days-in-month [year month]))
+                               [(inc month) 1]
+                               [month (inc day-of-month)])
+        [year month] (if (= month 13)
+                       [(inc year) 1]
+                       [year month])
+        date-breakdown (assoc (dissoc date-breakdown ::ticks)
+                         ::year year
+                         ::month month
+                         ::day-of-month day-of-month)]
+    (if (date-breakdown? date-breakdown)
+      (breakdown->date date-breakdown)
+      {::anomalies/fn       (var end-of-day)
+       ::anomalies/message  "not a valid date"
+       ::anomalies/category ::anomalies/exception})))
+
+(s/fdef end-of-day
+  :args (s/cat :date ::date)
+  :ret (s/or :date ::date
+             :anomaly ::anomalies/anomaly))
 
 (defn ticks-in-month
   "Returns the number of ticks in the month that `date` resides."

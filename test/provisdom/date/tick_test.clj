@@ -8,7 +8,7 @@
     [provisdom.math.core :as m])
   (:import (java.time Duration)))
 
-;19 seconds
+;21 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -315,6 +315,13 @@
   (is= tick/date-2020
        (tick/start-of-year (tick/add-months-to-date tick/date-2020 4))))
 
+(deftest end-of-year-test
+  (is (spec-check tick/end-of-year))
+  (is= (tick/add-months-to-date tick/date-2020 12)
+       (tick/end-of-year tick/date-2020))
+  (is= (tick/add-months-to-date tick/date-2020 12)
+       (tick/end-of-year (tick/add-months-to-date tick/date-2020 4))))
+
 (deftest start-of-month-test
   (is (spec-check tick/start-of-month))
   (is= tick/date-2020
@@ -323,12 +330,27 @@
        (tick/start-of-month
          (+ (tick/add-months-to-date tick/date-2020 4) 2342478))))
 
+(deftest end-of-month-test
+  (is (spec-check tick/end-of-month))
+  (is= (tick/add-months-to-date tick/date-2020 1)
+       (tick/end-of-month tick/date-2020))
+  (is= (tick/add-months-to-date tick/date-2020 5)
+       (tick/end-of-month
+         (+ (tick/add-months-to-date tick/date-2020 4) 2342478))))
+
 (deftest start-of-day-test
   (is (spec-check tick/start-of-day))
   (is= tick/date-2020
        (tick/start-of-day tick/date-2020))
   (is= tick/date-2020
        (tick/start-of-day (+ tick/date-2020 2342478))))
+
+(deftest end-of-day-test
+  (is (spec-check tick/end-of-day))
+  (is= (+ tick/date-2020 tick/ticks-per-day)
+       (tick/end-of-day tick/date-2020))
+  (is= (+ tick/date-2020 tick/ticks-per-day)
+       (tick/end-of-day (+ tick/date-2020 2342478))))
 
 (deftest ticks-in-month-test
   (is (spec-check tick/ticks-in-month))
