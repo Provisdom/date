@@ -73,6 +73,7 @@
 (s/def ::ticks ::m/long)                                    ;;1/1144 of a microsecond
 (s/def ::ticks+ ::m/long+)
 (s/def ::ticks-non- ::m/long-non-)
+(s/def ::tick-stuff (m/long-non--spec 3.0))
 (s/def ::date ::m/long)                                     ;;ticks from epoch
 (s/def ::year (s/int-in 1814 2326))
 (s/def ::month (s/int-in 1 13))
@@ -91,6 +92,22 @@
 (s/def ::date-interval ::intervals/long-interval)
 (s/def ::strict-date-interval (intervals/strict-interval-spec ::m/date))
 (s/def ::seconds-fraction-precision (s/int-in 0 16))        ;;formatting fractions of a second
+
+(defn date-spec
+  [{:keys [date-min date-max]}]
+  (m/long-spec {:min date-min :max date-max}))
+
+(defn ticks-spec
+  [{:keys [ticks-min ticks-max]}]
+  (m/long-spec {:min ticks-min :max ticks-max}))
+
+(defn ticks-non--spec
+  [ticks-max]
+  (m/long-non--spec ticks-max))
+
+(defn ticks+-spec
+  [ticks-max]
+  (m/long+-spec ticks-max))
 
 (s/def ::java-duration
   (s/with-gen (partial instance? Duration)
@@ -668,8 +685,8 @@
   "Returns start of year of `date`."
   [date]
   (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks)
-             ::month 1
-             ::day-of-month 1)]
+                         ::month 1
+                         ::day-of-month 1)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
       {::anomalies/fn       (var start-of-year)

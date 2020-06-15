@@ -3,9 +3,9 @@
            clojure.java-time        {:mvn/version "0.3.2"}
            org.clojure/data.int-map {:mvn/version "0.2.4"}
            provisdom/math           {:git/url "https://github.com/Provisdom/math.git"
-                                     :sha     "bce9e695b8dc8b741c1ef10ef4521cd138e10653"}
+                                     :sha     "54231e79ab0e3f4eaf54cfea5208359118202f95"}
            provisdom/utility-belt   {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                     :sha     "aa1092372d282f7e360955afc0513cdaf8e20af3"}}
+                                     :sha     "1da8fbc02fb28f636ddca6ddf11c67a034f61a98"}}
  :aliases {:test        {:extra-paths ["test"]
                          :extra-deps  {org.clojure/test.check    {:mvn/version "0.10.0-alpha3"}
                                        provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
