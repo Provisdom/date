@@ -70,7 +70,8 @@
 (def ^:const max-nanos 8062388144103825408)
 (def ^:const min-nanos -8062388144103825408)
 
-(s/def ::ticks ::m/long)                                    ;;1/1144 of a microsecond
+;;1/1144 of a microsecond
+(s/def ::ticks ::m/long)
 (s/def ::ticks+ ::m/long+)
 (s/def ::ticks-non- ::m/long-non-)
 (s/def ::tick-stuff (m/long-non--spec 3.0))
@@ -91,7 +92,8 @@
 (s/def ::date-range (s/tuple ::date ::date))
 (s/def ::date-interval ::intervals/long-interval)
 (s/def ::strict-date-interval (intervals/strict-interval-spec ::m/date))
-(s/def ::seconds-fraction-precision (s/int-in 0 16))        ;;formatting fractions of a second
+;;formatting fractions of a second
+(s/def ::seconds-fraction-precision (s/int-in 0 16))
 
 (defn date-spec
   [{:keys [date-min date-max]}]
@@ -206,7 +208,7 @@
   :args (s/cat :ticks ::ticks)
   :ret ::java-duration)
 
-(defn bound-java-duration->ticks
+(defn java-duration->ticks-by-bounding
   "Bounded to tick range (long) and rounded to nearest tick. A java-duration
   consists of nanoseconds, and there are 1.144 ticks in a nanosecond."
   [java-duration]
@@ -215,7 +217,7 @@
         ticks (+' (*' seconds ticks-per-second) (* (/ nanos 1000) ticks-per-us))]
     (m/round (intervals/bound-by-interval [m/min-long m/max-long] ticks) :up)))
 
-(s/fdef bound-java-duration->ticks
+(s/fdef java-duration->ticks-by-bounding
   :args (s/cat :java-duration ::java-duration)
   :ret ::ticks)
 
@@ -241,12 +243,12 @@
   :args (s/cat :instant-ms ::instant-ms)
   :ret ::date)
 
-(defn bound-ms->instant-ms
+(defn ms->instant-ms-by-bounding
   "Bound `ms` to ::instant-ms range."
   [ms]
   (intervals/bound-by-interval [min-instant-ms max-instant-ms] ms))
 
-(s/fdef bound-ms->instant-ms
+(s/fdef ms->instant-ms-by-bounding
   :args (s/cat :ms ::m/long)
   :ret ::instant-ms)
 
@@ -269,7 +271,7 @@
   :args (s/cat :instant ::instant)
   :ret ::date)
 
-(defn bound-java-date->instant
+(defn java-date->instant-by-bounding
   "Bound `java-date` to ::instant range (#inst\"1814-07-08T07:44:15.896-00:00\"
   to #inst\"2325-06-28T16:15:44.104-00:00\"."
   [java-date]
@@ -277,7 +279,7 @@
         (.after ^Date java-date max-instant) max-instant
         :else java-date))
 
-(s/fdef bound-java-date->instant
+(s/fdef java-date->instant-by-bounding
   :args (s/cat :java-date ::instant/java-date)
   :ret ::instant)
 
@@ -564,7 +566,8 @@
   (let [{::keys [year month day-of-month]} date-breakdown
         ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))
         days (+' (instant/days-until-month [year month])    ;includes leap-days
-                 (instant/passed-leap-days [epoch 1] [year 1]) ;don't want to double-count leap-days
+                 ;;don't want to double-count leap-days
+                 (instant/passed-leap-days [epoch 1] [year 1])
                  (* 365 (+' year (- epoch)))
                  (dec day-of-month))
         date (+' (*' ticks-per-day days) ticks)]
@@ -574,13 +577,13 @@
   :args (s/cat :date-breakdown ::date-breakdown)
   :ret ::date)
 
-(defn bound-java-date->date
+(defn java-date->date-by-bounding
   "Bound `java-date` to ::date range (#inst\"1814-07-08T07:44:15.896-00:00\"
   to #inst\"2325-06-28T16:15:44.104-00:00\"."
   [java-date]
-  (instant->date (bound-java-date->instant java-date)))
+  (instant->date (java-date->instant-by-bounding java-date)))
 
-(s/fdef bound-java-date->date
+(s/fdef java-date->date-by-bounding
   :args (s/cat :java-date ::instant/java-date)
   :ret ::date)
 
@@ -777,7 +780,8 @@
   [date]
   (let [{::keys [year month day-of-month]
          :as    date-breakdown} (date->breakdown date #{})
-        [month day-of-month] (if (= day-of-month (instant/days-in-month [year month]))
+        [month day-of-month] (if (= day-of-month
+                                    (instant/days-in-month [year month]))
                                [(inc month) 1]
                                [month (inc day-of-month)])
         [year month] (if (= month 13)

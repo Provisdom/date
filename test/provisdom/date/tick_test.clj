@@ -24,16 +24,16 @@
   (is= (Duration/ofNanos tick/max-nanos)
        (tick/ticks->java-duration m/max-long)))
 
-(deftest bound-java-duration->ticks-test
-  (is (spec-check tick/bound-java-duration->ticks))
+(deftest java-duration->ticks-by-bounding-test
+  (is (spec-check tick/java-duration->ticks-by-bounding))
   (is= 0
-       (tick/bound-java-duration->ticks Duration/ZERO))
+       (tick/java-duration->ticks-by-bounding Duration/ZERO))
   (is= m/min-long
-       (tick/bound-java-duration->ticks (Duration/ofNanos tick/min-nanos)))
+       (tick/java-duration->ticks-by-bounding (Duration/ofNanos tick/min-nanos)))
   (is= m/max-long
-       (tick/bound-java-duration->ticks (Duration/ofNanos tick/max-nanos)))
+       (tick/java-duration->ticks-by-bounding (Duration/ofNanos tick/max-nanos)))
   (is= m/max-long
-       (tick/bound-java-duration->ticks (Duration/ofNanos m/max-long))))
+       (tick/java-duration->ticks-by-bounding (Duration/ofNanos m/max-long))))
 
 ;;;INSTANT-MS
 (deftest date->instant-ms-test
@@ -58,11 +58,11 @@
   (is= m/max-long
        (tick/instant-ms->date 11218148144104)))
 
-(deftest bound-ms->instant-ms-test
-  (is (spec-check tick/bound-ms->instant-ms))
-  (is= -4906628144104 (tick/bound-ms->instant-ms m/min-long))
-  (is= 11218148144104 (tick/bound-ms->instant-ms m/max-long))
-  (is= 0 (tick/bound-ms->instant-ms 0)))
+(deftest ms->instant-ms-by-bounding-test
+  (is (spec-check tick/ms->instant-ms-by-bounding))
+  (is= -4906628144104 (tick/ms->instant-ms-by-bounding m/min-long))
+  (is= 11218148144104 (tick/ms->instant-ms-by-bounding m/max-long))
+  (is= 0 (tick/ms->instant-ms-by-bounding 0)))
 
 ;;;INSTANT
 (deftest date->instant-test
@@ -87,14 +87,14 @@
   (is= m/max-long
        (tick/instant->date #inst"2325-06-28T16:15:44.104-00:00")))
 
-(deftest bound-java-date->instant-test
-  (is (spec-check tick/bound-java-date->instant))
+(deftest java-date->instant-by-bounding-test
+  (is (spec-check tick/java-date->instant-by-bounding))
   (is= #inst "1814-07-08T07:44:15.896-00:00"
-       (tick/bound-java-date->instant #inst"0000-01-01T00:00:00.000-00:00"))
+       (tick/java-date->instant-by-bounding #inst"0000-01-01T00:00:00.000-00:00"))
   (is= #inst "2325-06-28T16:15:44.104-00:00"
-       (tick/bound-java-date->instant #inst"9999-12-31T23:59:59.999-00:00"))
+       (tick/java-date->instant-by-bounding #inst"9999-12-31T23:59:59.999-00:00"))
   (is= #inst "2070-01-01T00:00:00.000-00:00"
-       (tick/bound-java-date->instant #inst"2070-01-01T00:00:00.000-00:00")))
+       (tick/java-date->instant-by-bounding #inst"2070-01-01T00:00:00.000-00:00")))
 
 ;;;TICKS
 (deftest ticks->breakdown-test
@@ -246,14 +246,14 @@
          #::tick{:us    0, :month 3, :seconds 0, :day-of-month 1, :year 2024,
                  :hours 0, :ticks 0, :minutes 0, :ms 0})))
 
-(deftest bound-java-date->date-test
-  (is (spec-check tick/bound-java-date->date))
+(deftest java-date->date-by-bounding-test
+  (is (spec-check tick/java-date->date-by-bounding))
   (is= m/min-long
-       (tick/bound-java-date->date #inst"0000-01-01T00:00:00.000-00:00"))
+       (tick/java-date->date-by-bounding #inst"0000-01-01T00:00:00.000-00:00"))
   (is= m/max-long
-       (tick/bound-java-date->date #inst"9999-12-31T23:59:59.999-00:00"))
+       (tick/java-date->date-by-bounding #inst"9999-12-31T23:59:59.999-00:00"))
   (is= tick/date-2070
-       (tick/bound-java-date->date #inst"2070-01-01T00:00:00.000-00:00")))
+       (tick/java-date->date-by-bounding #inst"2070-01-01T00:00:00.000-00:00")))
 
 (deftest date-breakdown?-test
   (is (spec-check tick/date-breakdown?))

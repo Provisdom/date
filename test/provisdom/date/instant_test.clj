@@ -72,14 +72,14 @@
   (is= 253402300799999
        (instant/inst->in-ms #inst"9999-12-31T23:59:59.999-00:00")))
 
-(deftest bound-java-date->inst-test
-  (is (spec-check instant/bound-java-date->inst))
+(deftest java-date->inst-by-bounding-test
+  (is (spec-check instant/java-date->inst-by-bounding))
   (is= #inst"0000-01-01T00:00:00.000-00:00"
-       (instant/bound-java-date->inst #inst"0000-01-01T00:00:00.000-00:00"))
+       (instant/java-date->inst-by-bounding #inst"0000-01-01T00:00:00.000-00:00"))
   (is= #inst"9999-12-31T23:59:59.999-00:00"
-       (instant/bound-java-date->inst #inst"9999-12-31T23:59:59.999-00:00"))
+       (instant/java-date->inst-by-bounding #inst"9999-12-31T23:59:59.999-00:00"))
   (is= #inst"2070-01-01T00:00:00.000-00:00"
-       (instant/bound-java-date->inst #inst"2070-01-01T00:00:00.000-00:00")))
+       (instant/java-date->inst-by-bounding #inst"2070-01-01T00:00:00.000-00:00")))
 
 ;;;IN-MS
 #_(deftest in-ms$-test
@@ -97,11 +97,11 @@
   (is= #inst"9999-12-31T23:59:59.999-00:00"
        (instant/in-ms->inst 253402300799999)))
 
-(deftest bound-ms->in-ms-test
-  (is (spec-check instant/bound-ms->in-ms))
-  (is= -62135769600000 (instant/bound-ms->in-ms m/min-long))
-  (is= 253402300799999 (instant/bound-ms->in-ms m/max-long))
-  (is= 0 (instant/bound-ms->in-ms 0)))
+(deftest ms->in-ms-by-bounding-test
+  (is (spec-check instant/ms->in-ms-by-bounding))
+  (is= -62135769600000 (instant/ms->in-ms-by-bounding m/min-long))
+  (is= 253402300799999 (instant/ms->in-ms-by-bounding m/max-long))
+  (is= 0 (instant/ms->in-ms-by-bounding 0)))
 
 ;;;PERIODS
 (deftest in-ms->period-test

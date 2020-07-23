@@ -174,7 +174,7 @@
   :args (s/cat :inst ::inst)
   :ret ::in-ms)
 
-(defn bound-java-date->inst
+(defn java-date->inst-by-bounding
   "Bound `java-date` to ::inst range (#inst\"0001-01-01T00:00:00.000-00:00\"
   to #inst\"9999-12-31T23:59:59.999-00:00\"."
   [java-date]
@@ -182,7 +182,7 @@
         (.after ^Date java-date max-inst) max-inst
         :else java-date))
 
-(s/fdef bound-java-date->inst
+(s/fdef java-date->inst-by-bounding
   :args (s/cat :java-date ::java-date)
   :ret ::inst)
 
@@ -205,12 +205,12 @@
   :args (s/cat :in-ms ::in-ms)
   :ret ::inst)
 
-(defn bound-ms->in-ms
+(defn ms->in-ms-by-bounding
   "Bound `ms` to ::in-ms range."
   [ms]
   (intervals/bound-by-interval [min-in-ms max-in-ms] ms))
 
-(s/fdef bound-ms->in-ms
+(s/fdef ms->in-ms-by-bounding
   :args (s/cat :ms ::m/long)
   :ret ::in-ms)
 
