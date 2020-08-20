@@ -15,5 +15,5 @@
                          :main-opts   ["-m" "cognitect.test-runner"
                                        "-n" "provisdom.utility-belt.core-test"]}
            :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.669"}
-                                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0-76"}}
+                                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0.76"}}
                          :main-opts  ["-m" "kaocha.runner"]}}}
