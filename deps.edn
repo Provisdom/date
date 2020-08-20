@@ -1,19 +1,19 @@
 {:paths   ["src"]
- :deps    {orchestra                {:mvn/version "2019.02.06-1"}
+ :deps    {orchestra                {:mvn/version "2020.07.12-1"}
            clojure.java-time        {:mvn/version "0.3.2"}
-           org.clojure/data.int-map {:mvn/version "0.2.4"}
+           org.clojure/data.int-map {:mvn/version "1.0.0"}
            provisdom/math           {:git/url "https://github.com/Provisdom/math.git"
                                      :sha     "54231e79ab0e3f4eaf54cfea5208359118202f95"}
            provisdom/utility-belt   {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                     :sha     "1da8fbc02fb28f636ddca6ddf11c67a034f61a98"}}
+                                     :sha     "718cdce35926c33d1e5a77565c95d695ceea87c1"}}
  :aliases {:test        {:extra-paths ["test"]
-                         :extra-deps  {org.clojure/test.check    {:mvn/version "0.10.0-alpha3"}
+                         :extra-deps  {org.clojure/test.check    {:mvn/version "1.1.0"}
                                        provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
-                                                                  :sha     "52b5b0b0f01b4b284ee81dd6673b4c01f1d78f9c"}
+                                                                  :sha     "ce443de2f550f6c69e217591489841e33a5d43d6"}
                                        com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                                  :sha     "028a6d41ac9ac5d5c405dfc38e4da6b4cc1255d5"}}
+                                                                  :sha     "6ec7f8eef509cd14d831e8cc16e856b31327a862"}}
                          :main-opts   ["-m" "cognitect.test-runner"
                                        "-n" "provisdom.utility-belt.core-test"]}
-           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "0.0-529"}
-                                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0-70"}}
+           :test-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.0.669"}
+                                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0-76"}}
                          :main-opts  ["-m" "kaocha.runner"]}}}
