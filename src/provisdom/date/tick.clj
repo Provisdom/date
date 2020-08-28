@@ -54,7 +54,9 @@
 (def ^:const date-2045 -902522649600000000)
 (def ^:const date-2070 0)
 (def ^:const epoch "2070" 2070)
+;;365.2425 days
 (def ^:const ticks-per-average-year "36101153088000000" 36101153088000000)
+;;30.436875 days
 (def ^:const ticks-per-average-month "3008429424000000" 3008429424000000)
 (def ^:const ticks-per-week "691891200000000" 691891200000000)
 (def ^:const ticks-per-day "98841600000000" 98841600000000)
