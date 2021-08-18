@@ -1,11 +1,11 @@
 {:paths   ["src"]
- :deps    {orchestra                {:mvn/version "2020.07.12-1"}
-           clojure.java-time        {:mvn/version "0.3.2"}
-           org.clojure/data.int-map {:mvn/version "1.0.0"}
-           provisdom/math           {:git/url "https://github.com/Provisdom/math.git"
-                                     :sha     "54231e79ab0e3f4eaf54cfea5208359118202f95"}
-           provisdom/utility-belt   {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                     :sha     "f60267312a0623abe33f3c63037f5fe81b35d3bf"}}
+ :deps    {orchestra/orchestra                 {:mvn/version "2020.07.12-1"}
+           clojure.java-time/clojure.java-time {:mvn/version "0.3.2"}
+           org.clojure/data.int-map            {:mvn/version "1.0.0"}
+           provisdom/math                      {:git/url "https://github.com/Provisdom/math.git"
+                                                :sha     "289ce7bfa71552998d025824e4e994ee2541955b"}
+           provisdom/utility-belt              {:git/url "https://github.com/Provisdom/utility-belt.git"
+                                                :sha     "9e91b311d1024628ef882290d93eff1b886b7eeb"}}
  :aliases {:test        {:extra-paths ["test"]
                          :extra-deps  {org.clojure/test.check    {:mvn/version "1.1.0"}
                                        provisdom/test            {:git/url "https://github.com/Provisdom/test.git"
