@@ -126,7 +126,7 @@
 ;;instant-ms stays in date range 1814-2325
 (s/def ::instant-ms (s/int-in min-instant-ms (inc max-instant-ms)))
 
-(defn- instant-in-range?
+(defn instant-in-range?
   [instant]
   (intervals/in-interval? [min-instant-ms max-instant-ms]
                           (instant/inst->in-ms instant)))
