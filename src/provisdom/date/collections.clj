@@ -1,11 +1,8 @@
 (ns provisdom.date.collections
   (:require
+    [clojure.data.int-map :as int-map]
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
-    [clojure.data.int-map :as int-map]
-    [clojure.core.reducers :as reducers]
     [provisdom.date.tick :as tick])
   (:import (clojure.data.int_map PersistentIntMap
                                  PersistentIntSet)))

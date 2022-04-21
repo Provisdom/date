@@ -1,18 +1,16 @@
 (ns provisdom.date.tick
   (:require
+    [clojure.set :as set]
     [clojure.spec.alpha :as s]
     [clojure.spec.gen.alpha :as gen]
-    [clojure.spec.test.alpha :as st]
-    [orchestra.spec.test :as ost]
     [clojure.string :as str]
-    [clojure.set :as set]
-    [provisdom.utility-belt.anomalies :as anomalies]
-    [provisdom.utility-belt.strings :as strings]
+    [provisdom.date.instant :as instant]
     [provisdom.math.core :as m]
     [provisdom.math.intervals :as intervals]
-    [provisdom.date.instant :as instant])
-  (:import (java.util Date)
-           (java.time Duration)))
+    [provisdom.utility-belt.anomalies :as anomalies]
+    [provisdom.utility-belt.strings :as strings])
+  (:import (java.time Duration)
+           (java.util Date)))
 
 ;;;;This namespace was created to handle dates and durations in an easy and
 ;;;; intuitive manner.
