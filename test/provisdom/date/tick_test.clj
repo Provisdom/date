@@ -391,6 +391,13 @@
   (is= [1 -3064089595183730]
        (tick/date-range->months-ceil [-2473847 2342423])))
 
+(deftest date-range->prorated-months-test
+  (is (spec-check tick/date-range->prorated-months))
+  (is= 76.89583182367238
+    (tick/date-range->prorated-months [73847 234242232323552353]))
+  (is= 1.5718437215413022E-9
+    (tick/date-range->prorated-months [-2473847 2342423])))
+
 ;;;PERIODS
 (deftest ticks->period-test
   (is (spec-check tick/ticks->period))

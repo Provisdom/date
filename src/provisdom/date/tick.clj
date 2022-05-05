@@ -113,7 +113,7 @@
 
 (s/def ::java-duration
   (s/with-gen (partial instance? Duration)
-              #(gen/fmap ticks->java-duration (s/gen ::ticks))))
+    #(gen/fmap ticks->java-duration (s/gen ::ticks))))
 
 (s/def ::ticks-in-month
   #{(* 28 ticks-per-day)
@@ -127,12 +127,12 @@
 (defn instant-in-range?
   [instant]
   (intervals/in-interval? [min-instant-ms max-instant-ms]
-                          (instant/inst->in-ms instant)))
+    (instant/inst->in-ms instant)))
 
 ;;instant stays in date range 1814-2325
 (s/def ::instant
   (s/with-gen (s/and ::instant/java-date instant-in-range?)
-              #(gen/fmap instant/in-ms->inst (s/gen ::instant-ms))))
+    #(gen/fmap instant/in-ms->inst (s/gen ::instant-ms))))
 
 (def time-breakdown-all
   [::hours ::minutes ::seconds ::ms ::us ::ticks])
@@ -160,7 +160,7 @@
 
 (s/def ::core-date-breakdown
   (s/keys :req [::year ::month ::day-of-month]
-          :opt [::hours ::minutes ::seconds ::ms ::us ::ticks]))
+    :opt [::hours ::minutes ::seconds ::ms ::us ::ticks]))
 
 (defn- date-breakdown-day-in-month?
   [{::keys [year month day-of-month]}]
@@ -171,26 +171,26 @@
   (let [{::keys [year month day-of-month]} x]
     (let [t (breakdown->ticks (dissoc x ::weeks ::days))]
       (and (not (anomalies/anomaly? t))
-           (intervals/in-interval? [0 (dec ticks-per-day)] t)
-           (cond (= year 1814)
-                 (or (> month 7)
-                     (and (= month 7)
-                          (or (> day-of-month 8)
-                              (and (= day-of-month 8) (>= t 31867145224192)))))
+        (intervals/in-interval? [0 (dec ticks-per-day)] t)
+        (cond (= year 1814)
+              (or (> month 7)
+                (and (= month 7)
+                  (or (> day-of-month 8)
+                    (and (= day-of-month 8) (>= t 31867145224192)))))
 
-                 (= year 2325)
-                 (or (< month 6)
-                     (and (= month 6)
-                          (or (< day-of-month 28)
-                              (and (= day-of-month 28) (<= t 66974454775807)))))
+              (= year 2325)
+              (or (< month 6)
+                (and (= month 6)
+                  (or (< day-of-month 28)
+                    (and (= day-of-month 28) (<= t 66974454775807)))))
 
-                 :else
-                 true)))))
+              :else
+              true)))))
 
 (s/def ::date-breakdown
   (s/and ::core-date-breakdown
-         date-breakdown-day-in-month?
-         date-breakdown-in-range?))
+    date-breakdown-day-in-month?
+    date-breakdown-in-range?))
 
 (def days-of-week
   [:sunday :monday :tuesday :wednesday :thursday :friday :saturday])
@@ -291,22 +291,22 @@
                  ::anomalies/fn       (var parse-time)}]
     (condp = (count (filter (fn [c]
                               (= (str c) ":"))
-                            time-string))
+                      time-string))
       3
       (let [r (map (fn [sub]
                      (when-not (= "" sub)
                        (read-string (str sub))))
-                   (str/split time-string #":|\."))
+                (str/split time-string #":|\."))
             not-all-longs? (some false? (map m/long? r))]
         (if not-all-longs?
           anomaly
           (let [[hours minutes seconds ms us ticks] r
                 t (+' (*' hours ticks-per-hour)
-                      (*' minutes ticks-per-minute)
-                      (*' seconds ticks-per-second)
-                      (*' ms ticks-per-ms)
-                      (*' us ticks-per-us)
-                      ticks)]
+                    (*' minutes ticks-per-minute)
+                    (*' seconds ticks-per-second)
+                    (*' ms ticks-per-ms)
+                    (*' us ticks-per-us)
+                    ticks)]
             (if (intervals/in-interval? [m/min-long m/max-long] t)
               (long t)
               anomaly))))
@@ -315,7 +315,7 @@
       (let [[hours minutes seconds] (map (fn [sub]
                                            (when-not (= "" sub)
                                              (read-string (str sub))))
-                                         (str/split time-string #":"))
+                                      (str/split time-string #":"))
             [seconds ticks] (if (m/num? seconds)
                               (m/quot-and-mod'
                                 (* seconds ticks-per-second)
@@ -328,9 +328,9 @@
           anomaly
           (let [[hours minutes seconds ticks] r
                 t (+' (*' hours ticks-per-hour)
-                      (*' minutes ticks-per-minute)
-                      (*' seconds ticks-per-second)
-                      ticks)]
+                    (*' minutes ticks-per-minute)
+                    (*' seconds ticks-per-second)
+                    ticks)]
             (if (intervals/in-interval? [m/min-long m/max-long] t)
               (long t)
               anomaly))))
@@ -340,7 +340,7 @@
 (s/fdef parse-time
   :args (s/cat :time-string string?)
   :ret (s/or :ticks ::ticks
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 ;;;TICKS
 (def lookup-of-ticks-per
@@ -371,15 +371,15 @@
                                   [(assoc acc k n) t]
                                   [acc t]))
                               [acc t]))
-                          [{} ticks]
-                          ticks-breakdown-all))]
+                    [{} ticks]
+                    ticks-breakdown-all))]
      (if (and (not want-ticks?) (zero? (get m ::ticks 0)))
        (dissoc m ::ticks)
        m))))
 
 (s/fdef ticks->breakdown
   :args (s/cat :ticks ::ticks
-               :ticks-form (s/? ::ticks-form))
+          :ticks-form (s/? ::ticks-form))
   :ret ::ticks-breakdown)
 
 (defn breakdown->ticks
@@ -389,13 +389,13 @@
          :or    {weeks   0, days 0, hours 0, minutes 0,
                  seconds 0, ms 0, us 0, ticks 0}} ticks-breakdown
         t (+' (*' weeks ticks-per-week)
-              (*' days ticks-per-day)
-              (*' hours ticks-per-hour)
-              (*' minutes ticks-per-minute)
-              (*' seconds ticks-per-second)
-              (*' ms ticks-per-ms)
-              (*' us ticks-per-us)
-              ticks)]
+            (*' days ticks-per-day)
+            (*' hours ticks-per-hour)
+            (*' minutes ticks-per-minute)
+            (*' seconds ticks-per-second)
+            (*' ms ticks-per-ms)
+            (*' us ticks-per-us)
+            ticks)]
     (if (intervals/in-interval? [m/min-long m/max-long] t)
       (long t)
       {::anomalies/category ::anomalies/exception
@@ -405,7 +405,7 @@
 (s/fdef breakdown->ticks
   :args (s/cat :ticks-breakdown ::ticks-breakdown)
   :ret (s/or :ticks ::ticks
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn format-ticks
   "Formats `ticks` as a string. Optionally, use `seconds-fraction-precision` to
@@ -417,7 +417,7 @@
           :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0,
                   ms    0, us 0, ticks 0}} (ticks->breakdown ticks)]
      (str "W" weeks "D" days "T" (f2 hours) ":" (f2 minutes) ":"
-          (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
+       (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
   ([ticks seconds-fraction-precision]
    (let [f2 (partial format "%02d")
          {::keys [weeks days hours minutes seconds ms us ticks]
@@ -428,13 +428,13 @@
                  (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
          seconds-fraction (double (/ ticks ticks-per-second))]
      (str "W" weeks "D" days "T" (f2 hours) ":" (f2 minutes) ":"
-          (format (str "%0" (+ 3 seconds-fraction-precision)
-                       "." seconds-fraction-precision "f")
-                  (+ seconds seconds-fraction))))))
+       (format (str "%0" (+ 3 seconds-fraction-precision)
+                 "." seconds-fraction-precision "f")
+         (+ seconds seconds-fraction))))))
 
 (s/fdef format-ticks
   :args (s/cat :ticks ::ticks
-               :seconds-fraction-precision (s/? ::seconds-fraction-precision))
+          :seconds-fraction-precision (s/? ::seconds-fraction-precision))
   :ret string?)
 
 (defn- read-number
@@ -473,7 +473,7 @@
 (s/fdef parse-ticks
   :args (s/cat :ticks-string string?)
   :ret (s/or :ticks ::ticks
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 ;;;MONTHS
 (defn months->breakdown
@@ -502,7 +502,7 @@
 (s/fdef breakdown->months
   :args (s/cat :months-breakdown ::months-breakdown)
   :ret (s/or :months ::months
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 ;;;DATES
 (defn date$
@@ -529,8 +529,8 @@
                             (let [dm (instant/days-in-month [year month])]
                               (if (> day dm)
                                 (recur (- day dm)
-                                       (if (== month 12) 1 (inc month))
-                                       (if (== month 12) (inc year) year))
+                                  (if (== month 12) 1 (inc month))
+                                  (if (== month 12) (inc year) year))
                                 [day month year])))
          [day month year] (loop [day day
                                  month month
@@ -540,8 +540,8 @@
                                 (recur (+ day (instant/days-in-month
                                                 [year
                                                  new-mo]))
-                                       new-mo
-                                       (if (m/one? month) (dec year) year)))
+                                  new-mo
+                                  (if (m/one? month) (dec year) year)))
                               [day month year]))
          ticks-bd (ticks->breakdown
                     ticks
@@ -551,11 +551,11 @@
      (merge {::year         year
              ::month        month
              ::day-of-month day}
-            ticks-bd))))
+       ticks-bd))))
 
 (s/fdef date->breakdown
   :args (s/cat :date ::date
-               :date-form (s/? ::date-form))
+          :date-form (s/? ::date-form))
   :ret ::date-breakdown)
 
 (defn breakdown->date
@@ -566,10 +566,10 @@
   (let [{::keys [year month day-of-month]} date-breakdown
         ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))
         days (+' (instant/days-until-month [year month])    ;includes leap-days
-                 ;;don't want to double-count leap-days
-                 (instant/passed-leap-days [epoch 1] [year 1])
-                 (* 365 (+' year (- epoch)))
-                 (dec day-of-month))
+               ;;don't want to double-count leap-days
+               (instant/passed-leap-days [epoch 1] [year 1])
+               (* 365 (+' year (- epoch)))
+               (dec day-of-month))
         date (+' (*' ticks-per-day days) ticks)]
     (long date)))
 
@@ -591,8 +591,8 @@
   "Tests whether `x` is a ::date-breakdown."
   [x]
   (and (s/valid? ::core-date-breakdown x)
-       (date-breakdown-day-in-month? x)
-       (date-breakdown-in-range? x)))
+    (date-breakdown-day-in-month? x)
+    (date-breakdown-in-range? x)))
 
 (s/fdef date-breakdown?
   :args (s/cat :x any?)
@@ -608,7 +608,7 @@
           :or    {hours 0, minutes 0, seconds 0, ms 0, us 0,
                   ticks 0}} (date->breakdown date)]
      (str (f2 year) "-" (f2 month) "-" (f2 day-of-month) "T" (f2 hours) ":"
-          (f2 minutes) ":" (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
+       (f2 minutes) ":" (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
   ([date seconds-fraction-precision]
    (let [f2 (partial format "%02d")
          {::keys [year month day-of-month hours minutes seconds ms us ticks]
@@ -618,13 +618,13 @@
                  (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
          seconds-fraction (double (/ ticks ticks-per-second))]
      (str (f2 year) "-" (f2 month) "-" (f2 day-of-month) "T" (f2 hours) ":"
-          (f2 minutes) ":" (format (str "%0" (+ 3 seconds-fraction-precision)
-                                        "." seconds-fraction-precision "f")
-                                   (+ seconds seconds-fraction))))))
+       (f2 minutes) ":" (format (str "%0" (+ 3 seconds-fraction-precision)
+                                  "." seconds-fraction-precision "f")
+                          (+ seconds seconds-fraction))))))
 
 (s/fdef format-date
   :args (s/cat :date ::date
-               :seconds-fraction-precision (s/? ::seconds-fraction-precision))
+          :seconds-fraction-precision (s/? ::seconds-fraction-precision))
   :ret string?)
 
 (defn parse-date
@@ -650,7 +650,7 @@
 (s/fdef parse-date
   :args (s/cat :date-string string?)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn add-months-to-date
   "Adds `months` to `date`."
@@ -670,9 +670,9 @@
 
 (s/fdef add-months-to-date
   :args (s/cat :date ::date
-               :months ::months)
+          :months ::months)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn day-of-week
   "From a supplied `date`, returns the day of the week as a keyword :monday,
@@ -699,7 +699,7 @@
 (s/fdef start-of-year
   :args (s/cat :date ::date)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn end-of-year
   "Returns end of year of `date`."
@@ -719,7 +719,7 @@
 (s/fdef end-of-year
   :args (s/cat :date ::date)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn start-of-month
   "Returns start of month of `date`."
@@ -735,7 +735,7 @@
 (s/fdef start-of-month
   :args (s/cat :date ::date)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn end-of-month
   "Returns end of month of `date`."
@@ -758,7 +758,7 @@
 (s/fdef end-of-month
   :args (s/cat :date ::date)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn start-of-day
   "Returns start of day of `date`."
@@ -773,7 +773,7 @@
 (s/fdef start-of-day
   :args (s/cat :date ::date)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn end-of-day
   "Returns end of day of `date`."
@@ -781,7 +781,7 @@
   (let [{::keys [year month day-of-month]
          :as    date-breakdown} (date->breakdown date #{})
         [month day-of-month] (if (= day-of-month
-                                    (instant/days-in-month [year month]))
+                                   (instant/days-in-month [year month]))
                                [(inc month) 1]
                                [month (inc day-of-month)])
         [year month] (if (= month 13)
@@ -800,7 +800,7 @@
 (s/fdef end-of-day
   :args (s/cat :date ::date)
   :ret (s/or :date ::date
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn ticks-in-month
   "Returns the number of ticks in the month that `date` resides."
@@ -824,9 +824,9 @@
          end-days  ::day-of-month
          end-ticks ::ticks} (date->breakdown end-date #{})
         months (+ (* 12 (- end-year start-year))
-                  (- end-month start-month))
+                 (- end-month start-month))
         ticks (+ (* ticks-per-day (- end-days start-days))
-                 (- (or end-ticks 0) (or start-ticks 0)))]
+                (- (or end-ticks 0) (or start-ticks 0)))]
     [months ticks]))
 
 (defn months-difference
@@ -839,8 +839,7 @@
   :ret ::months)
 
 (defn date-range->months-calendar
-  "Returns the number of calendar months and remaining ticks from a
-  date-range."
+  "Returns the number of calendar months and remaining ticks from a date-range."
   [[start-date end-date]]
   (let [months (months-difference [start-date end-date])
         new-start-date (add-months-to-date start-date months)]
@@ -851,7 +850,7 @@
 (s/fdef date-range->months-calendar
   :args (s/cat :date-range ::date-range)
   :ret (s/or :duration ::duration
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn date-range->months-floor
   "Returns the floor of months and remaining ticks from a date-range."
@@ -867,7 +866,7 @@
 (s/fdef date-range->months-floor
   :args (s/cat :date-range ::date-range)
   :ret (s/or :duration ::duration
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
 
 (defn date-range->months-ceil
   "Returns the ceil of months and remaining ticks from a date-range."
@@ -883,7 +882,29 @@
 (s/fdef date-range->months-ceil
   :args (s/cat :date-range ::date-range)
   :ret (s/or :duration ::duration
-             :anomaly ::anomalies/anomaly))
+         :anomaly ::anomalies/anomaly))
+
+(defn date-range->prorated-months
+  "Returns the prorated number of months from a date-range."
+  [[start-date end-date]]
+  (let [end-of-start-month (end-of-month start-date)
+        start-of-end-month (start-of-month end-date)
+        whole-months (dec (first (date-range->months-calendar
+                                   [end-of-start-month start-of-end-month])))
+        end-month-ticks (double (ticks-in-month end-date))]
+    (if (neg? whole-months)
+      (/ (- end-date start-date) end-month-ticks)
+      (let [start-month-ticks (ticks-in-month start-date)
+            start-ticks-remaining (- end-of-start-month (double start-date))
+            end-ticks-along (- end-date start-of-end-month)]
+        (+ whole-months
+          (/ start-ticks-remaining start-month-ticks)
+          (/ end-ticks-along end-month-ticks))))))
+
+(s/fdef date-range->prorated-months
+  :args (s/cat :date-range ::date-range)
+  :ret (s/or :prorated-months (m/finite-non--spec 6130.686379808011)
+         :anomaly ::anomalies/anomaly))
 
 ;;;PERIODS
 (defn ticks->period
