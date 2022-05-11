@@ -893,7 +893,7 @@
                                    [end-of-start-month start-of-end-month])))
         end-month-ticks (double (ticks-in-month end-date))]
     (if (neg? whole-months)
-      (/ (- end-date start-date) end-month-ticks)
+      (/ (- end-date (double start-date)) end-month-ticks)
       (let [start-month-ticks (ticks-in-month start-date)
             start-ticks-remaining (- end-of-start-month (double start-date))
             end-ticks-along (- end-date start-of-end-month)]
