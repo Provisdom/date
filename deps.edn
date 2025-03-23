@@ -9,6 +9,8 @@
                                            orchestra/orchestra    {:mvn/version "2020.07.12-1"}
                                            provisdom/test         {:git/url "https://github.com/Provisdom/test.git"
                                                                    :sha     "ce443de2f550f6c69e217591489841e33a5d43d6"}}}
+           :local           {:override-deps {provisdom/math         {:local/root "../math"}
+                                             provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
                                           lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
                              :main-opts  ["-m" "kaocha.runner"]}}}
