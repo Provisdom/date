@@ -513,7 +513,7 @@
 (defn date->breakdown
   "A `date` can be broken down as a map of the keys ::year, ::month,
   ::day-of-month, ::hours, ::minutes, ::seconds, ::ms (milliseconds),
-  ::us (microseconds), and ::ticks. Optionally, a `date-form` set can breakdown
+  ::us (microseconds), and ::ticks. Optionally, a `date-form` set can break down
   the date as a subset of the keywords. Common use case is to provide an empty
   set, which will only contain ::ticks (if necessary) and the required ::year,
   ::month, and ::day-of-month."
