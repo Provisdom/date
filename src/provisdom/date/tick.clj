@@ -1,4 +1,26 @@
 (ns provisdom.date.tick
+  "This namespace was created to handle dates and durations in an easy and intuitive manner.
+
+  - 'ticks' are the smallest unit of time.
+  - 'date' is the number of ticks from 2070, which was chosen to be centered around a practical
+    range (1814-2325) and is 100 years in the future from 1970, the unix-epoch.
+  - Dates and ticks can be easily added to form new dates.
+  - Months are the other basic unit, as the number of ticks per month can vary.
+  - Dates, ticks, and months can be broken down into maps of various unit types.
+
+  There hasn't been much need for helper functions beyond the basics. For example:
+    - To get minutes from start of month of `date`:
+        (/ (- date (start-of-month date)) ticks-per-minute)
+    - To get minutes until end of month of `date`:
+        (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)
+
+  The tick size was chosen such that it is very likely that models that partition parts of a time
+  period will not lose accuracy. More specifically, ticks were chosen to have 400 years be divisible
+  by microseconds, and is divisible by 2^12 and all numbers through 16. There is a leap-day every 4
+  years excluding years divisible by 100, plus years divisible by 400:
+    400 years = 480 months = 20,871 weeks = 146,097 days
+      and
+    146097*24*60*60*1000000*11*13*8 = ticks in 400 years"
   (:require
     [clojure.set :as set]
     [clojure.spec.alpha :as s]
@@ -9,41 +31,9 @@
     [provisdom.math.intervals :as intervals]
     [provisdom.utility-belt.anomalies :as anomalies]
     [provisdom.utility-belt.strings :as strings])
-  (:import (java.time Duration)
-           (java.util Date)))
-
-;;;;This namespace was created to handle dates and durations in an easy and
-;;;; intuitive manner.
-;;;;
-;;;; 'ticks' are the smallest unit of time.
-;;;;
-;;;; 'date' is the number of ticks from 2070, which was chosen to be centered
-;;;; around a practical range (1814-2325) and is 100 years in the future from
-;;;; 1970, the unix-epoch.
-;;;;
-;;;; Dates and ticks can be easily added to form new dates.
-;;;;
-;;;; Months are the other basic unit, as the number of ticks per month can vary.
-;;;;
-;;;; Dates, ticks, and months can be broken down into maps of various unit
-;;;; types.
-;;;;
-;;;; There hasn't been much need for helper functions beyond the basics.
-;;;; For example, to get minutes from start of month of `date`:
-;;;;  (/ (- date (start-of-month date)) ticks-per-minute)
-;;;;
-;;;;  and to get minutes until end of month of `date`:
-;;;;  (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)
-;;;;
-;;;; The tick size was chosen such that it is very likely that models that
-;;;; partition parts of a time period will not lose accuracy. More specifically,
-;;;; ticks were chosen to have 400 years be divisible by microseconds, and is
-;;;; divisible by 2^12 and all numbers through 16. There is a
-;;;; leap-day every 4 years excluding years divisible by 100, plus years
-;;;; divisible by 400:
-;;;;   400 years = 480 months = 20,871 weeks = 146,097 days
-;;;; and
-;;;;   146097*24*60*60*1000000*11*13*8=ticks in 400 years
+  (:import
+    (java.time Duration)
+    (java.util Date)))
 
 (declare breakdown->ticks breakdown->months ticks->java-duration)
 
