@@ -163,19 +163,19 @@
       (and (not (anomalies/anomaly? t))
         (intervals/in-interval? [0 (dec ticks-per-day)] t)
         (cond (= year 1814)
-              (or (> month 7)
-                (and (= month 7)
-                  (or (> day-of-month 8)
-                    (and (= day-of-month 8) (>= t 31867145224192)))))
+          (or (> month 7)
+            (and (= month 7)
+              (or (> day-of-month 8)
+                (and (= day-of-month 8) (>= t 31867145224192)))))
 
-              (= year 2325)
-              (or (< month 6)
-                (and (= month 6)
-                  (or (< day-of-month 28)
-                    (and (= day-of-month 28) (<= t 66974454775807)))))
+          (= year 2325)
+          (or (< month 6)
+            (and (= month 6)
+              (or (< day-of-month 28)
+                (and (= day-of-month 28) (<= t 66974454775807)))))
 
-              :else
-              true)))))
+          :else
+          true)))))
 
 (s/def ::date-breakdown
   (s/and ::core-date-breakdown
@@ -213,7 +213,7 @@
 
 ;;;INSTANT-MS
 (defn date->instant-ms
-  "Returns an ::instant-ms. Loses precision below millisecond."
+  "Returns an `::instant-ms`. Loses precision below millisecond."
   [date]
   (m/round (- (/ date ticks-per-ms) (/ date-1970 ticks-per-ms)) :up))
 
@@ -222,7 +222,7 @@
   :ret ::instant-ms)
 
 (defn instant-ms->date
-  "Converts `instant-ms` to ::date."
+  "Converts `instant-ms` to `::date`."
   [instant-ms]
   (condp = instant-ms
     min-instant-ms m/min-long
@@ -234,7 +234,7 @@
   :ret ::date)
 
 (defn ms->instant-ms-by-bounding
-  "Bound `ms` to ::instant-ms range."
+  "Bound `ms` to `::instant-ms` range."
   [ms]
   (intervals/bound-by-interval [min-instant-ms max-instant-ms] ms))
 
@@ -262,12 +262,12 @@
   :ret ::date)
 
 (defn java-date->instant-by-bounding
-  "Bound `java-date` to ::instant range (#inst\"1814-07-08T07:44:15.896-00:00\"
+  "Bound `java-date` to `::instant` range (#inst\"1814-07-08T07:44:15.896-00:00\"
   to #inst\"2325-06-28T16:15:44.104-00:00\"."
   [java-date]
   (cond (.before ^Date java-date min-instant) min-instant
-        (.after ^Date java-date max-instant) max-instant
-        :else java-date))
+    (.after ^Date java-date max-instant) max-instant
+    :else java-date))
 
 (s/fdef java-date->instant-by-bounding
   :args (s/cat :java-date ::instant/java-date)
@@ -344,10 +344,10 @@
    ::ticks   1})
 
 (defn ticks->breakdown
-  "`ticks` can be broken down as a map of the keys ::weeks, ::days, ::hours,
-  ::minutes, ::seconds, ::ms (milliseconds), ::us (microseconds), and ::ticks.
-  Optionally, a `ticks-form` set can breakdown ticks as a subset of the
-  keywords."
+  "`ticks` can be broken down as a map of the keys `::weeks`, `::days`,
+  `::hours`, `::minutes`, `::seconds`, `::ms` (milliseconds),
+  `::us` (microseconds), and `::ticks`. Optionally, a `ticks-form` set can
+  breakdown ticks as a subset of the keywords."
   ([ticks] (ticks->breakdown ticks (set ticks-breakdown-all)))
   ([ticks ticks-form]
    (let [want-ticks? (contains? ticks-form ::ticks)
@@ -433,7 +433,7 @@
     (try (let [s2 (strings/trim-start s "0")
                s2 (if (= s2 "") "0" s2)]
            (read-string s2))
-         (catch Exception e anomaly))
+      (catch Exception _ anomaly))
     else))
 
 (defn parse-ticks
@@ -467,7 +467,7 @@
 
 ;;;MONTHS
 (defn months->breakdown
-  "`months` can be broken down into a map of ::months and ::years."
+  "`months` can be broken down into a map of `::months` and `::years`."
   [months]
   (let [[years months] (m/quot-and-rem' months 12)]
     {::years  years
@@ -478,7 +478,7 @@
   :ret ::months-breakdown)
 
 (defn breakdown->months
-  "Returns ::months."
+  "Returns `::months`."
   [months-breakdown]
   (let [{::keys [years months]
          :or    {years 0, months 0}} months-breakdown
@@ -651,7 +651,7 @@
         year (+ year years)
         month (inc months)
         date-breakdown (assoc date-breakdown ::year year
-                                             ::month month)]
+                         ::month month)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
       {::anomalies/category ::anomalies/exception
@@ -882,14 +882,15 @@
         whole-months (dec (first (date-range->months-calendar
                                    [end-of-start-month start-of-end-month])))
         end-month-ticks (double (ticks-in-month end-date))]
-    (if (neg? whole-months)
-      (/ (- end-date (double start-date)) end-month-ticks)
-      (let [start-month-ticks (ticks-in-month start-date)
-            start-ticks-remaining (- end-of-start-month (double start-date))
-            end-ticks-along (- end-date start-of-end-month)]
-        (+ whole-months
-          (/ start-ticks-remaining start-month-ticks)
-          (/ end-ticks-along end-month-ticks))))))
+    (max 0.0
+      (if (neg? whole-months)
+        (/ (- end-date (double start-date)) end-month-ticks)
+        (let [start-month-ticks (ticks-in-month start-date)
+              start-ticks-remaining (- end-of-start-month (double start-date))
+              end-ticks-along (- end-date start-of-end-month)]
+          (+ whole-months
+            (/ start-ticks-remaining start-month-ticks)
+            (/ end-ticks-along end-month-ticks)))))))
 
 (s/fdef date-range->prorated-months
   :args (s/cat :date-range ::date-range)
