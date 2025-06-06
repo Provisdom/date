@@ -1,0 +1,34 @@
+---
+description: Running clojure tests
+globs: 
+alwaysApply: false
+---
+To run clojure tests, use ./bin/kaocha. The script's usage is below. To run the tests in a paticular namespace, use --focus. e.g., ./bin/kaocha --focus my.ns_test
+
+USAGE:
+
+bin/kaocha [OPTIONS]... [TEST-SUITE]...
+
+  -c, --config-file FILE     tests.edn  Config file to read.
+      --print-config                    Print out the fully merged and normalized config, then exit.
+      --print-test-plan                 Load tests, build up a test plan, then print out the test plan and exit.
+      --print-result                    Print the test result map as returned by the Kaocha API.
+      --[no-]fail-fast                  Stop testing after the first failure.
+      --[no-]color                      Enable/disable ANSI color codes in output. Defaults to true.
+      --[no-]watch                      Watch filesystem for changes and re-run tests.
+      --reporter SYMBOL                 Change the test reporter, can be specified multiple times.
+      --diff-style STYLE                The style of diff to print on failing tests, either :none or :deep
+      --plugin KEYWORD                  Load the given plugin.
+      --profile KEYWORD                 Configuration profile. Defaults to :default or :ci.
+      --version                         Print version information and quit.
+      --help                            Display this help message.
+  -H, --test-help                       Display this help message.
+      --[no-]randomize                  Run test namespaces and vars in random order.
+      --seed SEED                       Provide a seed to determine the random order of tests.
+      --skip SYM                        Skip tests with this ID and their children.
+      --focus SYM                       Only run this test, skip others.
+      --skip-meta SYM                   Skip tests where this metadata key is truthy.
+      --focus-meta SYM                  Only run tests where this metadata key is truthy.
+      --[no-]capture-output             Capture output during tests.
+
+Options may be repeated multiple times for a logical OR effect.
