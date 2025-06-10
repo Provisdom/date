@@ -1,26 +1,29 @@
 (ns provisdom.date.tick
-  "This namespace was created to handle dates and durations in an easy and intuitive manner.
+  "High-precision date and duration handling with tick-based arithmetic.
 
-  - 'ticks' are the smallest unit of time.
-  - 'date' is the number of ticks from 2070, which was chosen to be centered around a practical
-    range (1814-2325) and is 100 years in the future from 1970, the unix-epoch.
-  - Dates and ticks can be easily added to form new dates.
-  - Months are the other basic unit, as the number of ticks per month can vary.
-  - Dates, ticks, and months can be broken down into maps of various unit types.
+  Core Concepts:
+  - 'ticks' are the fundamental time unit, providing sub-microsecond precision
+  - 'date' represents ticks elapsed since epoch 2070, chosen to center the practical
+    range (1814-2325) 100 years beyond the Unix epoch (1970)
+  - Dates and ticks combine through simple arithmetic to create new dates
+  - 'months' form a separate unit since month lengths vary
+  - All units decompose into structured maps for flexible manipulation
 
-  There hasn't been much need for helper functions beyond the basics. For example:
-    - To get minutes from start of month of `date`:
+  Common Operations:
+  Most date calculations use basic arithmetic. For example:
+    - Minutes from month start:
         (/ (- date (start-of-month date)) ticks-per-minute)
-    - To get minutes until end of month of `date`:
+    - Minutes until month end:
         (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)
 
-  The tick size was chosen such that it is very likely that models that partition parts of a time
-  period will not lose accuracy. More specifically, ticks were chosen to have 400 years be divisible
-  by microseconds, and is divisible by 2^12 and all numbers through 16. There is a leap-day every 4
-  years excluding years divisible by 100, plus years divisible by 400:
+  Precision Design:
+  Tick size ensures temporal models maintain accuracy during partitioning. The tick
+  value makes 400 years divisible by microseconds and by 2^12 and all integers 1-16.
+  Following Gregorian leap year rules (every 4 years, except centuries unless
+  divisible by 400):
     400 years = 480 months = 20,871 weeks = 146,097 days
-      and
-    146097*24*60*60*1000000*11*13*8 = ticks in 400 years"
+  Therefore:
+    146097 × 24 × 60 × 60 × 1,000,000 × 11 × 13 × 8 = ticks in 400 years"
   (:require
     [clojure.set :as set]
     [clojure.spec.alpha :as s]
@@ -37,28 +40,68 @@
 
 (declare breakdown->ticks breakdown->months ticks->java-duration)
 
-(def ^:const date-1970 -3610189440000000000)
-(def ^:const date-2020 -1805144140800000000)
-(def ^:const date-2045 -902522649600000000)
-(def ^:const date-2070 0)
-(def ^:const epoch "2070" 2070)
+(def ^:const date-1970
+  "Unix epoch as a tick date (-3610189440000000000)."
+  -3610189440000000000)
+(def ^:const date-2020
+  "Date constant for 2020-01-01 (-1805144140800000000)."
+  -1805144140800000000)
+(def ^:const date-2045
+  "Date constant for 2045-01-01 (-902522649600000000)."
+  -902522649600000000)
+(def ^:const date-2070
+  "Tick epoch date (2070-01-01) - zero point of the tick system."
+  0)
+(def ^:const epoch
+  "Epoch year for tick system (2070)."
+  2070)
 ;;365.2425 days
-(def ^:const ticks-per-average-year "36101153088000000" 36101153088000000)
+(def ^:const ticks-per-average-year
+  "Ticks in an average Gregorian year (36,101,153,088,000,000)."
+  36101153088000000)
 ;;30.436875 days
-(def ^:const ticks-per-average-month "3008429424000000" 3008429424000000)
-(def ^:const ticks-per-week "691891200000000" 691891200000000)
-(def ^:const ticks-per-day "98841600000000" 98841600000000)
-(def ^:const ticks-per-hour "4118400000000" 4118400000000)
-(def ^:const ticks-per-minute "68640000000" 68640000000)
-(def ^:const ticks-per-second "1144000000" 1144000000)
-(def ^:const ticks-per-ms "millisecond: 1144000" 1144000)
-(def ^:const ticks-per-us "microsecond: 1144" 1144)
-(def ^:const min-instant-ms -4906628144104)
-(def ^:const max-instant-ms 11218148144104)
-(def ^:const min-instant #inst"1814-07-08T07:44:15.896-00:00")
-(def ^:const max-instant #inst"2325-06-28T16:15:44.104-00:00")
-(def ^:const max-nanos 8062388144103825408)
-(def ^:const min-nanos -8062388144103825408)
+(def ^:const ticks-per-average-month
+  "Ticks in an average month (3,008,429,424,000,000)."
+  3008429424000000)
+(def ^:const ticks-per-week
+  "Ticks in a week (691,891,200,000,000)."
+  691891200000000)
+(def ^:const ticks-per-day
+  "Ticks in a day (98,841,600,000,000)."
+  98841600000000)
+(def ^:const ticks-per-hour
+  "Ticks in an hour (4,118,400,000,000)."
+  4118400000000)
+(def ^:const ticks-per-minute
+  "Ticks in a minute (68,640,000,000)."
+  68640000000)
+(def ^:const ticks-per-second
+  "Ticks in a second (1,144,000,000)."
+  1144000000)
+(def ^:const ticks-per-ms
+  "Ticks in a millisecond (1,144,000)."
+  1144000)
+(def ^:const ticks-per-us
+  "Ticks in a microsecond (1,144)."
+  1144)
+(def ^:const min-instant-ms
+  "Minimum instant in milliseconds (1814-07-08) (-4,906,628,144,104)."
+  -4906628144104)
+(def ^:const max-instant-ms
+  "Maximum instant in milliseconds (2325-06-28) (11,218,148,144,104)."
+  11218148144104)
+(def ^:const min-instant
+  "Minimum supported instant (1814-07-08T07:44:15.896-00:00)."
+  #inst"1814-07-08T07:44:15.896-00:00")
+(def ^:const max-instant
+  "Maximum supported instant (2325-06-28T16:15:44.104-00:00)."
+  #inst"2325-06-28T16:15:44.104-00:00")
+(def ^:const max-nanos
+  "Maximum nanoseconds for Java Duration conversion (8,062,388,144,103,825,408)."
+  8062388144103825408)
+(def ^:const min-nanos
+  "Minimum nanoseconds for Java Duration conversion (-8,062,388,144,103,825,408)."
+  -8062388144103825408)
 
 ;;1/1144 of a microsecond
 (s/def ::ticks ::m/long)
@@ -86,18 +129,25 @@
 (s/def ::seconds-fraction-precision (s/int-in 0 16))
 
 (defn date-spec
+  "Creates a spec for dates within a specific range.
+  
+  Example:
+    (date-spec {:date-min date-2020 :date-max date-2070})"
   [{:keys [date-min date-max]}]
   (m/long-spec {:min date-min :max date-max}))
 
 (defn ticks-spec
+  "Creates a spec for ticks within a specific range."
   [{:keys [ticks-min ticks-max]}]
   (m/long-spec {:min ticks-min :max ticks-max}))
 
 (defn ticks-non--spec
+  "Creates a spec for non-negative ticks up to `ticks-max`."
   [ticks-max]
   (m/long-non--spec ticks-max))
 
 (defn ticks+-spec
+  "Creates a spec for positive ticks up to `ticks-max`."
   [ticks-max]
   (m/long+-spec ticks-max))
 
@@ -115,6 +165,7 @@
 (s/def ::instant-ms (s/int-in min-instant-ms (inc max-instant-ms)))
 
 (defn instant-in-range?
+  "Returns true if instant is within supported date range."
   [instant]
   (intervals/in-interval? [min-instant-ms max-instant-ms]
     (instant/inst->in-ms instant)))
@@ -189,8 +240,9 @@
 
 ;;;JAVA DURATION
 (defn ticks->java-duration
-  "Rounded to the nearest nanosecond. A java-duration consists of nanoseconds,
-  and there are 1.144 ticks in a nanosecond."
+  "Converts `ticks` to Java Duration, rounded to nearest nanosecond.
+  
+  Note: 1.144 ticks = 1 nanosecond."
   [ticks]
   (Duration/ofNanos (m/round (* 1000 (/ ticks ticks-per-us)) :up)))
 
@@ -199,8 +251,10 @@
   :ret ::java-duration)
 
 (defn java-duration->ticks-by-bounding
-  "Bounded to tick range (long) and rounded to nearest tick. A java-duration
-  consists of nanoseconds, and there are 1.144 ticks in a nanosecond."
+  "Converts Java Duration to `ticks`, bounded to long range.
+  
+  Rounds to nearest tick and clamps to valid range.
+  Note: 1.144 ticks = 1 nanosecond."
   [java-duration]
   (let [nanos (.getNano ^Duration java-duration)
         seconds (.getSeconds ^Duration java-duration)
@@ -213,7 +267,9 @@
 
 ;;;INSTANT-MS
 (defn date->instant-ms
-  "Returns an `::instant-ms`. Loses precision below millisecond."
+  "Converts tick `date` to milliseconds since Unix epoch.
+  
+  Precision is limited to milliseconds."
   [date]
   (m/round (- (/ date ticks-per-ms) (/ date-1970 ticks-per-ms)) :up))
 
@@ -222,7 +278,7 @@
   :ret ::instant-ms)
 
 (defn instant-ms->date
-  "Converts `instant-ms` to `::date`."
+  "Converts `instant-ms` since Unix epoch to tick date."
   [instant-ms]
   (condp = instant-ms
     min-instant-ms m/min-long
@@ -234,7 +290,7 @@
   :ret ::date)
 
 (defn ms->instant-ms-by-bounding
-  "Bound `ms` to `::instant-ms` range."
+  "Bounds `ms` to supported instant range."
   [ms]
   (intervals/bound-by-interval [min-instant-ms max-instant-ms] ms))
 
@@ -244,7 +300,9 @@
 
 ;;;INSTANT
 (defn date->instant
-  "Returns an instant. Loses precision below millisecond."
+  "Converts tick `date` to Java instant.
+  
+  Precision is limited to milliseconds."
   [date]
   (Date. ^long (date->instant-ms date)))
 
@@ -253,7 +311,7 @@
   :ret ::instant)
 
 (defn instant->date
-  "Converts an `instant` to a date."
+  "Converts Java `instant` to tick date."
   [instant]
   (instant-ms->date (instant/inst->in-ms instant)))
 
@@ -262,8 +320,9 @@
   :ret ::date)
 
 (defn java-date->instant-by-bounding
-  "Bound `java-date` to `::instant` range (#inst\"1814-07-08T07:44:15.896-00:00\"
-  to #inst\"2325-06-28T16:15:44.104-00:00\"."
+  "Bounds Java Date to supported instant range (1814-2325).
+  
+  Clamps dates outside the range to the boundaries."
   [java-date]
   (cond (.before ^Date java-date min-instant) min-instant
     (.after ^Date java-date max-instant) max-instant
@@ -344,10 +403,16 @@
    ::ticks   1})
 
 (defn ticks->breakdown
-  "`ticks` can be broken down as a map of the keys `::weeks`, `::days`,
-  `::hours`, `::minutes`, `::seconds`, `::ms` (milliseconds),
-  `::us` (microseconds), and `::ticks`. Optionally, a `ticks-form` set can
-  breakdown ticks as a subset of the keywords."
+  "Breaks down `ticks` into time units.
+  
+  Returns a map with keys like ::weeks, ::days, ::hours, ::minutes,
+  ::seconds, ::ms, ::us, and ::ticks.
+  
+  Optional `ticks-form` set specifies which units to include.
+  
+  Example:
+    (ticks->breakdown 123456789)
+    ; => {::days 1 ::hours 10 ::minutes 23 ...}"
   ([ticks] (ticks->breakdown ticks (set ticks-breakdown-all)))
   ([ticks ticks-form]
    (let [want-ticks? (contains? ticks-form ::ticks)
@@ -373,7 +438,13 @@
   :ret ::ticks-breakdown)
 
 (defn breakdown->ticks
-  "Returns ticks as a long. Ticks are 1/1144 of a us (microsecond)."
+  "Converts a `ticks-breakdown` map back to total ticks.
+  
+  Accepts a map with time unit keys and returns the total ticks.
+  Returns an anomaly if the result exceeds long range.
+  
+  Example:
+    (breakdown->ticks {::hours 2 ::minutes 30})"
   [ticks-breakdown]
   (let [{::keys [weeks days hours minutes seconds ms us ticks]
          :or    {weeks   0, days 0, hours 0, minutes 0,
@@ -398,8 +469,15 @@
          :anomaly ::anomalies/anomaly))
 
 (defn format-ticks
-  "Formats `ticks` as a string. Optionally, use `seconds-fraction-precision` to
-  get seconds as a fraction."
+  "Formats `ticks` as a human-readable string.
+  
+  Format: W<weeks>D<days>T<HH>:<MM>:<SS>.<ms>.<us>:<ticks>
+  
+  Optional `seconds-fraction-precision` shows seconds as decimal.
+  
+  Example:
+    (format-ticks 123456789)
+    ; => \"W0D1T10:23:45.123.456:789\""
   ([ticks]
    (let [f2 (partial format "%02d")
          f3 (partial format "%03d")
@@ -437,7 +515,14 @@
     else))
 
 (defn parse-ticks
-  "Creates ticks from `ticks-string`."
+  "Parses a `ticks-string` into ticks.
+  
+  Accepts format: W<weeks>D<days>T<HH>:<MM>:<SS>.<ms>.<us>:<ticks>
+  
+  Returns ticks as a long or an anomaly if parsing fails.
+  
+  Example:
+    (parse-ticks \"W1D2T03:45:30.123.456:789\")"
   [ticks-string]
   (let [s ticks-string
         w? (str/includes? s "W")
@@ -467,7 +552,11 @@
 
 ;;;MONTHS
 (defn months->breakdown
-  "`months` can be broken down into a map of `::months` and `::years`."
+  "Breaks down `months` into years and remaining months.
+  
+  Example:
+    (months->breakdown 15)
+    ; => {::years 1 ::months 3}"
   [months]
   (let [[years months] (m/quot-and-rem' months 12)]
     {::years  years
@@ -478,7 +567,9 @@
   :ret ::months-breakdown)
 
 (defn breakdown->months
-  "Returns `::months`."
+  "Converts a `months-breakdown` back to total months.
+  
+  Returns total months or an anomaly if out of range."
   [months-breakdown]
   (let [{::keys [years months]
          :or    {years 0, months 0}} months-breakdown
@@ -496,17 +587,24 @@
 
 ;;;DATES
 (defn date$
-  "Now, returned to the nearest millisecond."
+  "Returns the current date as ticks.
+  
+  Precision limited to milliseconds."
   []
   (instant->date (instant/inst$)))
 
 (defn date->breakdown
-  "A `date` can be broken down as a map of the keys `::year`, `::month`,
-  `::day-of-month`, `::hours`, `::minutes`, `::seconds`, `::ms` (milliseconds),
-  `::us` (microseconds), and `::ticks`. Optionally, a `date-form` set can break
-  down the date as a subset of the keywords. Common use case is to provide an
-  empty set, which will only contain `::ticks` (if necessary) and the required
-  `::year`, `::month`, and `::day-of-month`."
+  "Breaks down a tick `date` into calendar and time components.
+  
+  Returns a map with ::year, ::month, ::day-of-month and optionally
+  time units like ::hours, ::minutes, etc.
+  
+  Optional `date-form` set specifies which components to include.
+  Use empty set #{} for just date components.
+  
+  Example:
+    (date->breakdown date-2020)
+    ; => {::year 2020 ::month 1 ::day-of-month 1}"
   ([date] (date->breakdown date (set date-breakdown-all)))
   ([date date-form]
    (let [[year ticks] (if (> date date-2045)
@@ -549,9 +647,15 @@
   :ret ::date-breakdown)
 
 (defn breakdown->date
-  "A date is a long in tick units representing the number of ticks starting from
-  'epoch' (2070) in the UTC time zone. A date must be later than 7/8/1814 and
-  earlier than 6/29/2325."
+  "Converts a `date-breakdown` map to tick date.
+  
+  Accepts a map with ::year, ::month, ::day-of-month and optional
+  time components. Returns ticks from epoch (2070).
+  
+  Date must be between 1814-07-08 and 2325-06-28.
+  
+  Example:
+    (breakdown->date {::year 2020 ::month 1 ::day-of-month 1})"
   [date-breakdown]
   (let [{::keys [year month day-of-month]} date-breakdown
         ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))
@@ -568,8 +672,9 @@
   :ret ::date)
 
 (defn java-date->date-by-bounding
-  "Bound `java-date` to ::date range (#inst\"1814-07-08T07:44:15.896-00:00\"
-  to #inst\"2325-06-28T16:15:44.104-00:00\"."
+  "Converts Java Date to tick date, bounded to supported range.
+  
+  Clamps `java-date` outside 1814-2325 to the boundaries."
   [java-date]
   (instant->date (java-date->instant-by-bounding java-date)))
 
@@ -578,7 +683,10 @@
   :ret ::date)
 
 (defn date-breakdown?
-  "Tests whether `x` is a ::date-breakdown."
+  "Returns true if `x` is a valid date breakdown.
+  
+  Checks that the breakdown has valid date components and
+  is within the supported date range."
   [x]
   (and (s/valid? ::core-date-breakdown x)
     (date-breakdown-day-in-month? x)
@@ -589,8 +697,15 @@
   :ret boolean?)
 
 (defn format-date
-  "Formats `date` as a string. Optionally, use `seconds-fraction-precision` to
-  get seconds as a fraction."
+  "Formats tick `date` as an ISO-like string.
+  
+  Format: YYYY-MM-DDTHH:MM:SS.mmm.uuu:ttt
+  
+  Optional `seconds-fraction-precision` shows seconds as decimal.
+  
+  Example:
+    (format-date date-2020)
+    ; => \"2020-01-01T00:00:00.000.000:0\""
   ([date]
    (let [f2 (partial format "%02d")
          f3 (partial format "%03d")
@@ -618,7 +733,14 @@
   :ret string?)
 
 (defn parse-date
-  "Creates ::date from `date-string`."
+  "Parses a `date-string` into tick date.
+  
+  Accepts format: YYYY-MM-DDTHH:MM:SS.mmm.uuu:ttt
+  
+  Returns tick date or an anomaly if parsing fails.
+  
+  Example:
+    (parse-date \"2020-01-01T00:00:00.000.000:0\")"
   [date-string]
   (let [s (str/split date-string #"-|T")
         [s1 s2 s3 s4] s
@@ -643,7 +765,14 @@
          :anomaly ::anomalies/anomaly))
 
 (defn add-months-to-date
-  "Adds `months` to `date`."
+  "Adds `months` to a tick `date`.
+  
+  Preserves day-of-month when possible. Returns anomaly if
+  the resulting date is invalid (e.g., Feb 30).
+  
+  Example:
+    (add-months-to-date date-2020 3)  ; 3 months later
+    (add-months-to-date date-2020 -6) ; 6 months earlier"
   [date months]
   (let [{::keys [year month]
          :as    date-breakdown} (date->breakdown date #{})
@@ -665,8 +794,13 @@
          :anomaly ::anomalies/anomaly))
 
 (defn day-of-week
-  "From a supplied `date`, returns the day of the week as a keyword :monday,
-  :tuesday, :wednesday, :thursday, :friday, :saturday, :sunday."
+  "Returns the day of week for a given `date`.
+  
+  Returns one of: :monday, :tuesday, :wednesday, :thursday,
+  :friday, :saturday, :sunday.
+  
+  Example:
+    (day-of-week date-2020) ; => :wednesday"
   [date]
   (nth days-of-week (m/mod' (+ (m/quot' date ticks-per-day) 3) 7)))
 
@@ -675,7 +809,10 @@
   :ret ::day-of-week)
 
 (defn start-of-year
-  "Returns start of year of `date`."
+  "Returns the first moment of the year containing `date`.
+  
+  Example:
+    (start-of-year some-date-in-2020) ; => 2020-01-01T00:00:00"
   [date]
   (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks)
                          ::month 1
@@ -692,7 +829,10 @@
          :anomaly ::anomalies/anomaly))
 
 (defn end-of-year
-  "Returns end of year of `date`."
+  "Returns the first moment of the next year after `date`.
+  
+  Example:
+    (end-of-year some-date-in-2020) ; => 2021-01-01T00:00:00"
   [date]
   (let [date-breakdown (update
                          (assoc (dissoc (date->breakdown date #{}) ::ticks)
@@ -712,7 +852,10 @@
          :anomaly ::anomalies/anomaly))
 
 (defn start-of-month
-  "Returns start of month of `date`."
+  "Returns the first moment of the month containing `date`.
+  
+  Example:
+    (start-of-month some-date-in-march) ; => 2020-03-01T00:00:00"
   [date]
   (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks)
                          ::day-of-month 1)]
@@ -728,7 +871,10 @@
          :anomaly ::anomalies/anomaly))
 
 (defn end-of-month
-  "Returns end of month of `date`."
+  "Returns the first moment of the next month after `date`.
+  
+  Example:
+    (end-of-month some-date-in-march) ; => 2020-04-01T00:00:00"
   [date]
   (let [{::keys [year month]
          :as    date-breakdown} (date->breakdown date #{})
@@ -751,7 +897,10 @@
          :anomaly ::anomalies/anomaly))
 
 (defn start-of-day
-  "Returns start of day of `date`."
+  "Returns the first moment (midnight) of the day containing `date`.
+  
+  Example:
+    (start-of-day some-datetime) ; => YYYY-MM-DDTOO:00:00"
   [date]
   (let [bd (dissoc (date->breakdown date #{}) ::ticks)]
     (if (date-breakdown? bd)
@@ -766,7 +915,10 @@
          :anomaly ::anomalies/anomaly))
 
 (defn end-of-day
-  "Returns end of day of `date`."
+  "Returns the first moment (midnight) of the next day after `date`.
+  
+  Example:
+    (end-of-day some-datetime) ; => next day at 00:00:00"
   [date]
   (let [{::keys [year month day-of-month]
          :as    date-breakdown} (date->breakdown date #{})
@@ -793,7 +945,9 @@
          :anomaly ::anomalies/anomaly))
 
 (defn ticks-in-month
-  "Returns the number of ticks in the month that `date` resides."
+  "Returns the number of ticks in the month containing `date`.
+  
+  Accounts for varying month lengths and leap years."
   [date]
   (let [{::keys [year month]} (date->breakdown date)]
     (* (instant/days-in-month [year month]) ticks-per-day)))
@@ -820,7 +974,10 @@
     [months ticks]))
 
 (defn months-difference
-  "Returns the number of calendar months from a `date-range`."
+  "Returns the calendar month difference between two dates.
+  
+  Example:
+    (months-difference [start-date end-date]) ; => 6"
   [date-range]
   (first (date-range->duration date-range)))
 
@@ -829,7 +986,13 @@
   :ret ::months)
 
 (defn date-range->months-calendar
-  "Returns the number of calendar months and remaining ticks from a date-range."
+  "Converts date range to calendar months plus remaining ticks.
+  
+  Returns [months ticks] tuple.
+  
+  Example:
+    (date-range->months-calendar [start end])
+    ; => [6 12345678] ; 6 months + some ticks"
   [[start-date end-date]]
   (let [months (months-difference [start-date end-date])
         new-start-date (add-months-to-date start-date months)]
@@ -875,7 +1038,13 @@
          :anomaly ::anomalies/anomaly))
 
 (defn date-range->prorated-months
-  "Returns the prorated number of months from a date-range."
+  "Converts date range to prorated (fractional) months.
+  
+  Accounts for partial months at start and end of the range.
+  
+  Example:
+    (date-range->prorated-months [start end])
+    ; => 6.23 ; 6.23 months"
   [[start-date end-date]]
   (let [end-of-start-month (end-of-month start-date)
         start-of-end-month (start-of-month end-date)
@@ -899,7 +1068,9 @@
 
 ;;;PERIODS
 (defn ticks->period
-  "Returns ::instant/period (in average-years) from `ticks`."
+  "Converts `ticks` to period in average years.
+  
+  Uses average year length of 365.2425 days."
   [ticks]
   (/ ticks (double ticks-per-average-year)))
 
@@ -908,7 +1079,7 @@
   :ret ::instant/period)
 
 (defn date-range->period
-  "Returns period from `date-range`."
+  "Converts `date-range` to period in average years."
   [[start-date end-date]]
   (/ (- end-date (double start-date)) ticks-per-average-year))
 
@@ -918,7 +1089,7 @@
 
 ;;;PREDICATES
 (defn weekend?
-  "Returns whether a supplied `date` occurs on a Saturday or Sunday."
+  "Returns true if `date` falls on Saturday or Sunday."
   [date]
   (let [dow (day-of-week date)]
     (or (= dow :saturday) (= dow :sunday))))
@@ -928,7 +1099,7 @@
   :ret boolean?)
 
 (defn weekday?
-  "Returns whether a supplied `date` occurs on Monday through Friday."
+  "Returns true if `date` falls on Monday through Friday."
   [date]
   (not (weekend? date)))
 
@@ -937,7 +1108,7 @@
   :ret boolean?)
 
 (defn first-day-of-month?
-  "Returns whether a supplied `date` occurs on the first day of a month."
+  "Returns true if `date` is the first day of its month."
   [date]
   (m/one? (::day-of-month (date->breakdown date #{}))))
 
@@ -946,7 +1117,7 @@
   :ret boolean?)
 
 (defn last-day-of-month?
-  "Returns whether a supplied `date` occurs on the last day of a month."
+  "Returns true if `date` is the last day of its month."
   [date]
   (first-day-of-month? (+ date ticks-per-day)))
 
@@ -955,7 +1126,9 @@
   :ret boolean?)
 
 (defn same-day?
-  "Returns true if both dates of date-range fall on the same day."
+  "Returns true if both dates fall on the same calendar day.
+  
+  Ignores time-of-day components."
   [[start-date end-date]]
   (let [start-breakdown (dissoc (date->breakdown start-date #{}) ::ticks)
         end-breakdown (dissoc (date->breakdown end-date #{}) ::ticks)]
