@@ -1,4 +1,9 @@
 (ns provisdom.date.collections
+  "High-performance collections optimized for date operations using integer maps.
+
+  Provides date-map and date-set collections that leverage clojure.data.int-map
+  for significantly faster operations on dense date collections. Use dense-date-set
+  when elements are clustered within +/- 1000 ticks of each other."
   (:require
     [clojure.data.int-map :as int-map]
     [clojure.spec.alpha :as s]
@@ -7,18 +12,14 @@
   (:import (clojure.data.int_map PersistentIntMap
                                  PersistentIntSet)))
 
-;;;;This namespace was created to wrap the clojure.data.int-map ns for use with
-;;;; dates (and ticks) -- mostly to help remember to use it. The two collections
-;;;; in this ns (date-map and date-set) have the possibility to be significantly
-;;;; faster than normal sorted collections. A dense date set is a special type
-;;;; of date set. [[map-merge]] is fast, so you can use
-;;;; (reducers/fold [[map-merge]] reducef coll) for fast parallelism of creating
-;;;; and manipulating date-maps.
-;;;; See https://github.com/clojure/data.int-map.
 
 (declare date-set? date-map?)
 
 (defmacro date-map-of
+  "Creates a spec for a date-map with values matching `vpred`.
+  
+  Example:
+    (s/def ::price-map (date-map-of pos?))"
   [vpred & opts]
   (let [sform `(s/map-of ::tick/date ~vpred ~@opts)
         xform `(s/and ~sform date-map?)]
@@ -39,70 +40,102 @@
 
 ;;;DATE MAP
 (defn date-map?
-  "Checks whether `x` is a ::date-map."
+  "Returns true if `x` is a date-map."
   [x]
   (instance? PersistentIntMap x))
 
 (defn date-map
-  "Creates a date map that can only have dates (ticks, longs) as keys."
+  "Creates a date-map with dates as keys.
+  
+  Accepts pairs of date/value arguments.
+  
+  Example:
+    (date-map date1 value1 date2 value2)"
   ([] (int-map/int-map))
   ([date v] (int-map/int-map date v))
   ([date v & rest] (apply int-map/int-map date v rest)))
 
 (defn map-merge
-  "Merges together two date-maps, giving precedence to values from the
-  right-most map."
+  "Merges date-maps with right-most values taking precedence.
+
+  Example:
+    (map-merge dm1 dm2 dm3)"
   ([] (int-map/merge))
   ([date-map1 date-map2] (int-map/merge date-map1 date-map2))
   ([date-map1 date-map2 & rest] (apply int-map/merge date-map1 date-map2 rest)))
 
 (defn map-merge-with
-  "Merges together two date-maps, using `f` to resolve value conflicts."
+  "Merges date-maps using function `f` to resolve conflicts.
+  
+  When keys are present in multiple maps, `f` is called with
+  the conflicting values.
+  
+  Example:
+    (map-merge-with + dm1 dm2) ; adds values for duplicate keys"
   ([f] (int-map/merge-with f))
   ([f date-map1 date-map2] (int-map/merge-with f date-map1 date-map2))
   ([f date-map1 date-map2 & rest]
    (apply int-map/merge-with f date-map1 date-map2 rest)))
 
 (defn map-update
-  "Updates the value associated with the given date.  If no such date exists,
-  `f` is invoked with `nil`."
+  "Updates the value at `date` by applying function `f`.
+  
+  If `date` is not present, `f` is called with nil.
+  
+  Example:
+    (map-update dm date inc)"
   ([date-map date f] (int-map/update date-map date f))
   ([date-map date f & args] (apply int-map/update date-map date f args)))
 
 (defn map-update!
-  "A transient variant of [[map-update]]."
+  "Transient version of map-update for performance-critical code.
+  
+  Mutates the transient date-map in place."
   ([date-map date f] (int-map/update! date-map date f))
   ([date-map date f & args] (apply int-map/update! date-map date f args)))
 
 ;;;DATE SET
 (defn date-set?
-  "Checks whether `x` is a ::date-set."
+  "Returns true if `x` is a date-set."
   [x]
   (instance? PersistentIntSet x))
 
 (defn date-set
-  "Use [[dense-date-set]] where the elements are densely clustered (each element
-  has multiple elements within +/- 1000), and [[date-set]] for everything else."
+  "Creates a date-set for sparse date collections.
+  
+  Use dense-date-set when dates are clustered within +/- 1000 ticks.
+  
+  Example:
+    (date-set [date1 date2 date3])"
   ([] (int-map/int-set))
   ([dates] (int-map/int-set dates)))
 
 (defn dense-date-set
-  "Use [[dense-date-set]] where the elements are densely clustered (each element
-  has multiple elements within +/- 1000), and [[date-set]] for everything else."
+  "Creates a dense date-set optimized for clustered dates.
+  
+  Use when dates are densely clustered (within +/- 1000 ticks).
+  More memory efficient than regular date-set for dense collections.
+  
+  Example:
+    (dense-date-set consecutive-trading-days)"
   ([] (int-map/dense-int-set))
   ([dates] (int-map/dense-int-set dates)))
 
 (defn set-union
-  "Returns the union of `date-set1` and `date-set2`."
+  "Returns the union of two date-sets.
+  
+  Contains all dates from both sets."
   [date-set1 date-set2]
   (int-map/union date-set1 date-set2))
 
 (defn set-intersection
-  "Returns the intersection of `date-set1` and `date-set2`."
+  "Returns the intersection of two date-sets.
+  
+  Contains only dates present in both sets."
   [date-set1 date-set2]
   (int-map/intersection date-set1 date-set2))
 
 (defn set-difference
-  "Returns the difference of `date-set1` and `date-set2`."
+  "Returns dates in `date-set1` but not in `date-set2`."
   [date-set1 date-set2]
   (int-map/difference date-set1 date-set2))
