@@ -107,8 +107,11 @@
 (s/def ::ticks ::m/long)
 (s/def ::ticks+ ::m/long+)
 (s/def ::ticks-non- ::m/long-non-)
-(s/def ::tick-stuff (m/long-non--spec 3.0))
-(s/def ::date ::m/long)                                     ;;ticks from epoch
+(s/def ::date ::m/long)
+;;ticks from epoch
+(s/def ::date-as-double
+  (s/double-in {:infinite? false :NaN? false :min m/min-long :max m/max-long}))
+
 (s/def ::year (s/int-in 1814 2326))
 (s/def ::month (s/int-in 1 13))
 (s/def ::day-of-month (s/int-in 1 32))
