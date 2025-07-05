@@ -1,14 +1,14 @@
 (ns provisdom.date.tick-test
   (:require
     [clojure.test :refer :all]
-    [provisdom.test.core :refer :all]
-    [clojure.spec.test.alpha :as st]
+    ; [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.date.tick :as tick]
-    [provisdom.math.core :as m])
+    [provisdom.math.core :as m]
+    [provisdom.test.core :refer :all])
   (:import (java.time Duration)))
 
-;21 seconds
+;9 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -370,12 +370,12 @@
   (is= -1
        (tick/months-difference [2342423 -2473847])))
 
-(deftest date-range->months-calendar-test
-  (is (spec-check tick/date-range->months-calendar))
+(deftest date-range->duration-test
+  (is (spec-check tick/date-range->duration))
   (is= [77 2656363523478506]
-       (tick/date-range->months-calendar [73847 234242232323552353]))
+       (tick/date-range->duration [73847 234242232323552353]))
   (is= [1 -3064089595183730]
-       (tick/date-range->months-calendar [-2473847 2342423])))
+       (tick/date-range->duration [-2473847 2342423])))
 
 (deftest date-range->months-floor-test
   (is (spec-check tick/date-range->months-floor))
@@ -398,20 +398,33 @@
   (is= 1.5718437215413022E-9
     (tick/date-range->prorated-months [-2473847 2342423])))
 
-;;;PERIODS
-(deftest ticks->period-test
-  (is (spec-check tick/ticks->period))
-  (is= 8.16660631615668E-6
-       (tick/ticks->period 294823904829))
-  (is= -6.852542892382862E-11
-       (tick/ticks->period -2473847)))
+(deftest format-duration-test
+  (is (spec-check tick/format-duration))
+  (is= "Y0M3W20D0T01:18:17.923.282:622"
+    (tick/format-duration [3 13843198424235230]))
+  (is= "Y1M3W20D0T01:18:17.9233"
+    (tick/format-duration [15 13843198424235230] 4))
+  (is= "Y0M-3W20D0T01:18:17.92328254"
+    (tick/format-duration [-3 13843198424235230] 8))
+  (is= "Y-1M-3W20D0T01:18:17.923282543706293"
+    (tick/format-duration [-15 13843198424235230] 15))
+  (is= "Y0M0W481D5T09:34:51.375.291:429"
+    (tick/format-duration [0 333333333333333333])))
 
-(deftest date-range->period-test
-  (is (spec-check tick/date-range->period))
+;;;YEARLY PERIODS
+(deftest ticks->yearly-periods-test
+  (is (spec-check tick/ticks->yearly-periods))
+  (is= 8.16660631615668E-6
+       (tick/ticks->yearly-periods 294823904829))
+  (is= -6.852542892382862E-11
+       (tick/ticks->yearly-periods -2473847)))
+
+(deftest date-range->yearly-periods-test
+  (is (spec-check tick/date-range->yearly-periods))
   (is= 3.3368513762008396E-4
-       (tick/date-range->period [294823904829 12341242141242]))
+       (tick/date-range->yearly-periods [294823904829 12341242141242]))
   (is= 6.917427246472333E-11
-       (tick/date-range->period [-2473847 23424])))
+       (tick/date-range->yearly-periods [-2473847 23424])))
 
 ;;;PREDICATES
 (deftest weekend?-test

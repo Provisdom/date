@@ -964,7 +964,7 @@
   :ret ::ticks-in-month)
 
 ;;;DATE RANGE
-(defn- date-range->duration
+(defn- date-range->duration-raw
   [[start-date end-date]]
   (let [{start-year  ::year
          start-month ::month
@@ -986,19 +986,19 @@
   Example:
     (months-difference [start-date end-date]) ; => 6"
   [date-range]
-  (first (date-range->duration date-range)))
+  (first (date-range->duration-raw date-range)))
 
 (s/fdef months-difference
   :args (s/cat :date-range ::date-range)
   :ret ::months)
 
-(defn date-range->months-calendar
+(defn date-range->duration
   "Converts date range to calendar months plus remaining ticks.
   
   Returns [months ticks] tuple.
   
   Example:
-    (date-range->months-calendar [start end])
+    (date-range->duration [start end])
     ; => [6 12345678] ; 6 months + some ticks"
   [[start-date end-date]]
   (let [months (months-difference [start-date end-date])
@@ -1007,7 +1007,7 @@
       new-start-date
       [months (- end-date new-start-date)])))
 
-(s/fdef date-range->months-calendar
+(s/fdef date-range->duration
   :args (s/cat :date-range ::date-range)
   :ret (s/or :duration ::duration
          :anomaly ::anomalies/anomaly))
@@ -1015,7 +1015,7 @@
 (defn date-range->months-floor
   "Returns the floor of months and remaining ticks from a date-range."
   [[start-date end-date]]
-  (let [[months ticks] (date-range->duration [start-date end-date])]
+  (let [[months ticks] (date-range->duration-raw [start-date end-date])]
     (if (neg? ticks)
       (let [new-start-date (add-months-to-date start-date (dec months))]
         (if (anomalies/anomaly? new-start-date)
@@ -1031,7 +1031,7 @@
 (defn date-range->months-ceil
   "Returns the ceil of months and remaining ticks from a date-range."
   [[start-date end-date]]
-  (let [[months ticks] (date-range->duration [start-date end-date])]
+  (let [[months ticks] (date-range->duration-raw [start-date end-date])]
     (if (pos? ticks)
       (let [new-start-date (add-months-to-date start-date (inc months))]
         (if (anomalies/anomaly? new-start-date)
@@ -1055,7 +1055,7 @@
   [[start-date end-date]]
   (let [end-of-start-month (end-of-month start-date)
         start-of-end-month (start-of-month end-date)
-        whole-months (dec (first (date-range->months-calendar
+        whole-months (dec (first (date-range->duration
                                    [end-of-start-month start-of-end-month])))
         end-month-ticks (double (ticks-in-month end-date))]
     (max 0.0
@@ -1073,26 +1073,53 @@
   :ret (s/or :prorated-months (m/finite-non--spec 6130.686379808011)
          :anomaly ::anomalies/anomaly))
 
-;;;PERIODS
-(defn ticks->period
+(defn format-duration
+  "Formats `duration` as a human-readable string.
+
+  Format: Y<years>M<months>W<weeks>D<days>T<HH>:<MM>:<SS>.<ms>.<us>:<ticks>
+
+  Optional `seconds-fraction-precision` shows seconds as decimal.
+
+  Example:
+    (format-duration [3 123456789])
+    ; => \"Y0M3W0D1T10:23:45.123.456:789\"
+
+    (format-duration [15 123456789] 4)
+    ; => \"Y1M3W0D1T10:23:45.1235\""
+  ([duration]
+   (let [[months ticks] duration
+         {::keys [months years]} (months->breakdown months)]
+     (str "Y" years "M" months (format-ticks ticks))))
+  ([duration seconds-fraction-precision]
+   (let [[months ticks] duration
+         {::keys [months years]} (months->breakdown months)]
+     (str "Y" years "M" months (format-ticks ticks seconds-fraction-precision)))))
+
+(s/fdef format-duration
+  :args (s/cat :duration ::duration
+          :seconds-fraction-precision (s/? ::seconds-fraction-precision))
+  :ret string?)
+
+;;;YEARLY PERIODS
+(defn ticks->yearly-periods
   "Converts `ticks` to period in average years.
   
   Uses average year length of 365.2425 days."
   [ticks]
   (/ ticks (double ticks-per-average-year)))
 
-(s/fdef ticks->period
+(s/fdef ticks->yearly-periods
   :args (s/cat :ticks ::ticks)
-  :ret ::instant/period)
+  :ret ::instant/yearly-periods)
 
-(defn date-range->period
+(defn date-range->yearly-periods
   "Converts `date-range` to period in average years."
   [[start-date end-date]]
   (/ (- end-date (double start-date)) ticks-per-average-year))
 
-(s/fdef date-range->period
+(s/fdef date-range->yearly-periods
   :args (s/cat :date-range ::date-range)
-  :ret ::instant/period)
+  :ret ::instant/yearly-periods)
 
 ;;;PREDICATES
 (defn weekend?

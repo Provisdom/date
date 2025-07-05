@@ -123,7 +123,7 @@
     #(gen/fmap in-ms->inst (s/gen ::in-ms))))
 
 (s/def ::duration-ms ::m/long)
-(s/def ::period ::m/number)                                 ;;average-years
+(s/def ::yearly-periods ::m/number)                                 ;;average-years
 
 (defn first-inst-not-after-second?
   [[inst1 inst2]]
@@ -278,19 +278,19 @@
   :args (s/cat :ms ::m/long)
   :ret ::in-ms)
 
-;;;PERIODS
-(defn in-ms->period
+;;;YEARLY PERIODS
+(defn in-ms->yearly-periods
   "Converts `in-ms` to period in average years.
   
   Uses average year length of 365.2425 days."
   [in-ms]
   (/ in-ms (double ms-per-average-year)))
 
-(s/fdef in-ms->period
+(s/fdef in-ms->yearly-periods
   :args (s/cat :in-ms ::in-ms)
-  :ret ::period)
+  :ret ::yearly-periods)
 
-(defn inst-interval->period
+(defn inst-interval->yearly-periods
   "Converts an `instant-interval` to period in average years.
   
   Takes a tuple of [start-instant end-instant] and returns
@@ -300,7 +300,7 @@
        (double (inst->in-ms (first instant-interval))))
     ms-per-average-year))
 
-(s/fdef inst-interval->period
+(s/fdef inst-interval->yearly-periods
   :args (s/cat :inst-interval ::inst-interval)
-  :ret (s/and ::period m/non-?))
+  :ret (s/and ::yearly-periods m/non-?))
 

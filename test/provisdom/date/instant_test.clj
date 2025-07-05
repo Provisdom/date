@@ -1,11 +1,11 @@
 (ns provisdom.date.instant-test
   (:require
+    ;[clojure.spec.test.alpha :as st]
     [clojure.test :refer :all]
-    [provisdom.test.core :refer :all]
-    [clojure.spec.test.alpha :as st]
     [orchestra.spec.test :as ost]
     [provisdom.date.instant :as instant]
-    [provisdom.math.core :as m]))
+    [provisdom.math.core :as m]
+    [provisdom.test.core :refer :all]))
 
 ;2 seconds
 
@@ -103,21 +103,21 @@
   (is= 253402300799999 (instant/ms->in-ms-by-bounding m/max-long))
   (is= 0 (instant/ms->in-ms-by-bounding 0)))
 
-;;;PERIODS
-(deftest in-ms->period-test
-  (is (spec-check instant/in-ms->period))
+;;;YEARLY PERIODS
+(deftest in-ms->yearly-periods-test
+  (is (spec-check instant/in-ms->yearly-periods))
   (is= 9.342597625683242
-       (instant/in-ms->period 294823904829))
+       (instant/in-ms->yearly-periods 294823904829))
   (is= -7.839309068885994E-5
-       (instant/in-ms->period -2473847)))
+       (instant/in-ms->yearly-periods -2473847)))
 
-(deftest inst-interval->period-test
-  (is (spec-check instant/inst-interval->period))
+(deftest inst-interval->yearly-periods-test
+  (is (spec-check instant/inst-interval->yearly-periods))
   (is= 3.901584981971643E-4
-       (instant/inst-interval->period
+       (instant/inst-interval->yearly-periods
          [(instant/in-ms->inst 29029)
           (instant/in-ms->inst 12341242)]))
   (is= 3.919982829773927E-4
-       (instant/inst-interval->period
+       (instant/inst-interval->yearly-periods
          [(instant/in-ms->inst -29029)
           (instant/in-ms->inst 12341242)])))
