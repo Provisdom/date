@@ -480,7 +480,11 @@
   
   Example:
     (format-ticks 123456789)
-    ; => \"W0D1T10:23:45.123.456:789\""
+    ; => \"W0D1T10:23:45.123.456:789\"
+
+    (format-ticks 123456789 4)
+    ; => \"W0D1T10:23:45.1235\"
+    "
   ([ticks]
    (let [f2 (partial format "%02d")
          f3 (partial format "%03d")
