@@ -134,6 +134,8 @@
 (s/def ::strict-date-interval (intervals/strict-interval-spec ::m/date))
 ;;formatting fractions of a second or average year
 (s/def ::fraction-precision (s/int-in 0 16))
+(s/def ::show-average-years? boolean?)
+(s/def ::show-zeros? boolean?)
 
 (defn date-spec
   "Creates a spec for dates within a specific range.
@@ -1127,7 +1129,7 @@
          and seconds. Default is false (hide zeros).
   - ::show-average-years? (optional): When true, shows ticks as
          average years (ay) instead of detailed time components.
-         Default is false.
+         Default is true.
 
   Example:
     (format-duration {::duration [3 123456789]})
@@ -1149,7 +1151,7 @@
     "
   [{::keys [duration fraction-precision show-average-years? show-zeros?]
     :or    {fraction-precision  6
-            show-average-years? false
+            show-average-years? true
             show-zeros?         false}}]
   (let [[months ticks] duration
         {::keys [months years]} (months->breakdown months)

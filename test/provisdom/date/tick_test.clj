@@ -405,14 +405,28 @@
 (deftest format-duration-test
   (is (spec-check tick/format-duration))
   (is= "3mo20w01h18m17.923283s"
-    (tick/format-duration {::tick/duration [3 13843198424235230]}))
+    (tick/format-duration {::tick/duration [3 13843198424235230]
+                           ::tick/show-average-years? false}))
   (is= "1y3mo20w01h18m17.9233s"
-    (tick/format-duration {::tick/duration [15 13843198424235230] ::tick/fraction-precision 4}))
+    (tick/format-duration {::tick/duration [15 13843198424235230]
+                           ::tick/fraction-precision 4
+                           ::tick/show-average-years? false}))
+  (is= "1y3mo0.3835ay"
+    (tick/format-duration {::tick/duration [15 13843198424235230]
+                           ::tick/fraction-precision 4
+                           ::tick/show-average-years? true}))
   (is= "-3mo20w01h18m17.92328254s"
-    (tick/format-duration {::tick/duration [-3 13843198424235230] ::tick/fraction-precision 8}))
+    (tick/format-duration {::tick/duration [-3 13843198424235230]
+                           ::tick/fraction-precision 8
+                           ::tick/show-average-years? false}))
   (is= "-1y-3mo20w01h18m17.923282543706293s"
-    (tick/format-duration {::tick/duration [-15 13843198424235230] ::tick/fraction-precision 15}))
+    (tick/format-duration {::tick/duration [-15 13843198424235230]
+                           ::tick/fraction-precision 15
+                           ::tick/show-average-years? false}))
   (is= "481w5d09h34m51.375291s"
+    (tick/format-duration {::tick/duration [0 333333333333333333]
+                           ::tick/show-average-years? false}))
+  (is= "9.233315ay"
     (tick/format-duration {::tick/duration [0 333333333333333333]})))
 
 (deftest parse-duration-test
