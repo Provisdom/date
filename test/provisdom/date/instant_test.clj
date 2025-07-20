@@ -103,21 +103,21 @@
   (is= 253402300799999 (instant/ms->in-ms-by-bounding m/max-long))
   (is= 0 (instant/ms->in-ms-by-bounding 0)))
 
-;;;YEARLY PERIODS
-(deftest in-ms->yearly-periods-test
-  (is (spec-check instant/in-ms->yearly-periods))
+;;;AVERAGE YEARS
+(deftest in-ms->average-years-test
+  (is (spec-check instant/in-ms->average-years))
   (is= 9.342597625683242
-       (instant/in-ms->yearly-periods 294823904829))
+       (instant/in-ms->average-years 294823904829))
   (is= -7.839309068885994E-5
-       (instant/in-ms->yearly-periods -2473847)))
+       (instant/in-ms->average-years -2473847)))
 
-(deftest inst-interval->yearly-periods-test
-  (is (spec-check instant/inst-interval->yearly-periods))
+(deftest inst-interval->average-years-test
+  (is (spec-check instant/inst-interval->average-years))
   (is= 3.901584981971643E-4
-       (instant/inst-interval->yearly-periods
+       (instant/inst-interval->average-years
          [(instant/in-ms->inst 29029)
           (instant/in-ms->inst 12341242)]))
   (is= 3.919982829773927E-4
-       (instant/inst-interval->yearly-periods
+       (instant/inst-interval->average-years
          [(instant/in-ms->inst -29029)
           (instant/in-ms->inst 12341242)])))

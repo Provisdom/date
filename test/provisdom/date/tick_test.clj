@@ -113,36 +113,40 @@
                  :ms    318, :us 504, :ticks 904}))
   (is= 1348333636369480
        (tick/breakdown->ticks
-         #::tick{::tick/days 13, ::tick/us 55413318504, ::tick/ticks 904})))
+         {::tick/days 13, ::tick/us 55413318504, ::tick/ticks 904})))
 
 (deftest format-ticks-test
   (is (spec-check tick/format-ticks))
-  (is= "W20D0T01:18:17.923.282:622"
-       (tick/format-ticks 13843198424235230))
-  (is= "W20D0T01:18:17.9233"
-       (tick/format-ticks 13843198424235230 4))
-  (is= "W20D0T01:18:17.92328254"
-       (tick/format-ticks 13843198424235230 8))
-  (is= "W20D0T01:18:17.923282543706293"
-       (tick/format-ticks 13843198424235230 15))
-  (is= "W481D5T09:34:51.375.291:429"
-       (tick/format-ticks 333333333333333333)))
+  (is= "20w01h18m17.923283s"
+       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 6}))
+  (is= "52w1d05h49m12.000000s"
+    (tick/format-ticks {::tick/ticks tick/ticks-per-average-year ::tick/fraction-precision 6}))
+  (is= "20w01h18m17.9233s"
+       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 4}))
+  (is= "20w01h18m17.92328254s"
+       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 8}))
+  (is= "20w01h18m17.923282543706293s"
+       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 15}))
+  (is= "481w5d09h34m51.375291s"
+       (tick/format-ticks {::tick/ticks 333333333333333333 ::tick/fraction-precision 6})))
 
 (deftest parse-ticks-test
   (is (spec-check tick/parse-ticks))
-  (is= 13843198424235230
-       (tick/parse-ticks "W20D0T01:18:17.923.282:622"))
-  (is= 13843198424255200                                    ;approx is off by 30 ticks
-       (tick/parse-ticks "W20D0T01:18:17.9233"))
-  (is= 13843198424235226                                    ;approx is off by 4 ticks
-       (tick/parse-ticks "W20D0T01:18:17.92328254"))
-  (is= 13843198424235230
-       (tick/parse-ticks "W20D0T01:18:17.923282543706293"))
-  (is= 3333 (tick/parse-ticks "T0:0:0.0.2:1045"))
-  (is= 3333333333333 (tick/parse-ticks "T0:48:33.752.913:861"))
-  (is= 333333333333333333
-       (tick/parse-ticks "W481D5T9:34:51.375.291:429"))
-  (is= 333333333333333 (tick/parse-ticks "T0:0:0.0.0:333333333333333")))
+  (is= 13843198424235752
+       (tick/parse-ticks "20w01h18m17.923283s"))
+  (is= 5374424235752
+    (tick/parse-ticks "01h18m17.923283s"))
+  (is= 13843198424255200                                    ;precision difference
+       (tick/parse-ticks "20w01h18m17.923300s"))
+  (is= 13843198424235752                                    ;consistent with new format
+       (tick/parse-ticks "20w01h18m17.923283s"))
+  (is= 13843198424235752
+       (tick/parse-ticks "20w01h18m17.923283s"))
+  (is= 1144000000 (tick/parse-ticks "1.000000s"))           ;1 second exactly
+  (is= 3333333333615 (tick/parse-ticks "48m33.752914s"))
+  (is= 333333333333332903
+       (tick/parse-ticks "481w5d09h34m51.375291s"))
+  (is= 333333333333000 (tick/parse-ticks "3d08h56m15.291375s")))
 
 ;;;MONTHS
 (deftest months->breakdown-test
@@ -400,31 +404,69 @@
 
 (deftest format-duration-test
   (is (spec-check tick/format-duration))
-  (is= "Y0M3W20D0T01:18:17.923.282:622"
-    (tick/format-duration [3 13843198424235230]))
-  (is= "Y1M3W20D0T01:18:17.9233"
-    (tick/format-duration [15 13843198424235230] 4))
-  (is= "Y0M-3W20D0T01:18:17.92328254"
-    (tick/format-duration [-3 13843198424235230] 8))
-  (is= "Y-1M-3W20D0T01:18:17.923282543706293"
-    (tick/format-duration [-15 13843198424235230] 15))
-  (is= "Y0M0W481D5T09:34:51.375.291:429"
-    (tick/format-duration [0 333333333333333333])))
+  (is= "3mo20w01h18m17.923283s"
+    (tick/format-duration {::tick/duration [3 13843198424235230]}))
+  (is= "1y3mo20w01h18m17.9233s"
+    (tick/format-duration {::tick/duration [15 13843198424235230] ::tick/fraction-precision 4}))
+  (is= "-3mo20w01h18m17.92328254s"
+    (tick/format-duration {::tick/duration [-3 13843198424235230] ::tick/fraction-precision 8}))
+  (is= "-1y-3mo20w01h18m17.923282543706293s"
+    (tick/format-duration {::tick/duration [-15 13843198424235230] ::tick/fraction-precision 15}))
+  (is= "481w5d09h34m51.375291s"
+    (tick/format-duration {::tick/duration [0 333333333333333333]})))
 
-;;;YEARLY PERIODS
-(deftest ticks->yearly-periods-test
-  (is (spec-check tick/ticks->yearly-periods))
+(deftest parse-duration-test
+  (is (spec-check tick/parse-duration))
+  ;; Test round-trip with format-duration
+  (is= [3 13843198424235752]
+    (tick/parse-duration "3mo20w01h18m17.923283s"))
+  (is= [15 13843198424235752]
+    (tick/parse-duration "1y3mo20w01h18m17.923283s"))
+  (is= [-3 13843198424235752]
+    (tick/parse-duration "-3mo20w01h18m17.923283s"))
+  (is= [-15 13843198424235752]
+    (tick/parse-duration "-1y-3mo20w01h18m17.923283s"))
+  (is= [0 333333333333332903]
+    (tick/parse-duration "481w5d09h34m51.375291s"))
+  ;; Test average years format
+  (is= [3 36101153088000000]
+    (tick/parse-duration "3mo1.000000ay"))
+  (is= [0 72202306176000000]
+    (tick/parse-duration "2.000000ay"))
+  ;; Test edge cases
+  (is= [12 0]
+    (tick/parse-duration "1y"))
+  (is= [5 0]
+    (tick/parse-duration "5mo"))
+  (is= [0 0]
+    (tick/parse-duration "0.000000ay"))
+  ;; Test round-trip compatibility with simple values
+  (let [original-duration [15 0]
+        formatted (tick/format-duration {::tick/duration original-duration})
+        parsed (tick/parse-duration formatted)]
+    (is= original-duration parsed))
+  ;; Test round-trip with average years (exact values)
+  (let [original-duration [3 tick/ticks-per-average-year]
+        formatted (tick/format-duration {::tick/duration original-duration 
+                                         ::tick/show-average-years? true
+                                         ::tick/fraction-precision 6})
+        parsed (tick/parse-duration formatted)]
+    (is= original-duration parsed)))
+
+;;;AVERAGE YEARS
+(deftest ticks->average-years-test
+  (is (spec-check tick/ticks->average-years))
   (is= 8.16660631615668E-6
-       (tick/ticks->yearly-periods 294823904829))
+       (tick/ticks->average-years 294823904829))
   (is= -6.852542892382862E-11
-       (tick/ticks->yearly-periods -2473847)))
+       (tick/ticks->average-years -2473847)))
 
-(deftest date-range->yearly-periods-test
-  (is (spec-check tick/date-range->yearly-periods))
+(deftest date-range->average-years-test
+  (is (spec-check tick/date-range->average-years))
   (is= 3.3368513762008396E-4
-       (tick/date-range->yearly-periods [294823904829 12341242141242]))
+       (tick/date-range->average-years [294823904829 12341242141242]))
   (is= 6.917427246472333E-11
-       (tick/date-range->yearly-periods [-2473847 23424])))
+       (tick/date-range->average-years [-2473847 23424])))
 
 ;;;PREDICATES
 (deftest weekend?-test

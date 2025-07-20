@@ -3,8 +3,8 @@
 
   Core Concepts:
   - 'ticks' are the fundamental time unit, providing sub-microsecond precision
-  - 'date' represents ticks elapsed since epoch 2070, chosen to center the practical
-    range (1814-2325) 100 years beyond the Unix epoch (1970)
+  - 'date' represents ticks elapsed since epoch 2070, chosen to center the
+    practical range (1814-2325) 100 years beyond the Unix epoch (1970)
   - Dates and ticks combine through simple arithmetic to create new dates
   - 'months' form a separate unit since month lengths vary
   - All units decompose into structured maps for flexible manipulation
@@ -38,7 +38,11 @@
     (java.time Duration)
     (java.util Date)))
 
-(declare breakdown->ticks breakdown->months ticks->java-duration)
+(declare breakdown->months
+  breakdown->ticks
+  parse-duration
+  ticks->average-years
+  ticks->java-duration)
 
 (def ^:const date-1970
   "Unix epoch as a tick date (-3610189440000000000)."
@@ -128,8 +132,8 @@
 (s/def ::date-range (s/tuple ::date ::date))
 (s/def ::date-interval ::intervals/long-interval)
 (s/def ::strict-date-interval (intervals/strict-interval-spec ::m/date))
-;;formatting fractions of a second
-(s/def ::seconds-fraction-precision (s/int-in 0 16))
+;;formatting fractions of a second or average year
+(s/def ::fraction-precision (s/int-in 0 16))
 
 (defn date-spec
   "Creates a spec for dates within a specific range.
@@ -323,7 +327,7 @@
   :ret ::date)
 
 (defn java-date->instant-by-bounding
-  "Bounds Java Date to supported instant range (1814-2325).
+  "Bounds Java Date to the supported instant range (1814-2325).
   
   Clamps dates outside the range to the boundaries."
   [java-date]
@@ -408,8 +412,8 @@
 (defn ticks->breakdown
   "Breaks down `ticks` into time units.
   
-  Returns a map with keys like ::weeks, ::days, ::hours, ::minutes,
-  ::seconds, ::ms, ::us, and ::ticks.
+  Returns a map with keys like `::weeks`, `::days`, `::hours`, `::minutes`,
+  `::seconds`, `::ms`, `::us`, and `::ticks`.
   
   Optional `ticks-form` set specifies which units to include.
   
@@ -474,42 +478,58 @@
 (defn format-ticks
   "Formats `ticks` as a human-readable string.
   
-  Format: W<weeks>D<days>T<HH>:<MM>:<SS>.<ms>.<us>:<ticks>
+  Format: <weeks>w<days>dh<hours>m<minutes>s<seconds>.<fractional-seconds>
   
-  Optional `seconds-fraction-precision` shows seconds as decimal.
+  Takes a map with:
+  - ::ticks (required): The ticks value to format
+  - ::seconds-fraction-precision (optional): Shows seconds as decimal with
+       specified precision. Default is 6.
+  - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes,
+       and seconds. Default is false (hide zeros).
   
   Example:
-    (format-ticks 123456789)
-    ; => \"W0D1T10:23:45.123.456:789\"
+    (format-ticks {`::ticks` 123456789})
+    ; => \"00.107917s\"
 
-    (format-ticks 123456789 4)
-    ; => \"W0D1T10:23:45.1235\"
+    (format-ticks {`::seconds-fraction-precision` 4, `::ticks` 123456789})
+    ; => \"00.1079s\"
+    
+    (format-ticks {`::show-zeros?` true, `::ticks` 123456789})
+    ; => \"0w0d00h00m00.107917s\"
+    
+    (format-ticks {`::seconds-fraction-precision` 4
+                   `::show-zeros?` true
+                   `::ticks` 123456789 })
+    ; => \"0w0d00h00m00.1079s\"
     "
-  ([ticks]
-   (let [f2 (partial format "%02d")
-         f3 (partial format "%03d")
-         {::keys [weeks days hours minutes seconds ms us ticks]
-          :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0,
-                  ms    0, us 0, ticks 0}} (ticks->breakdown ticks)]
-     (str "W" weeks "D" days "T" (f2 hours) ":" (f2 minutes) ":"
-       (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
-  ([ticks seconds-fraction-precision]
-   (let [f2 (partial format "%02d")
-         {::keys [weeks days hours minutes seconds ms us ticks]
-          :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0,
-                  ms    0, us 0, ticks 0}
-          :as    breakdown} (ticks->breakdown ticks)
-         ticks (breakdown->ticks
-                 (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
-         seconds-fraction (double (/ ticks ticks-per-second))]
-     (str "W" weeks "D" days "T" (f2 hours) ":" (f2 minutes) ":"
-       (format (str "%0" (+ 3 seconds-fraction-precision)
-                 "." seconds-fraction-precision "f")
-         (+ seconds seconds-fraction))))))
+  [{::keys [ticks fraction-precision show-zeros?]
+    :or    {fraction-precision 6, show-zeros? false}}]
+  (let [f2 (partial format "%02d")
+        {::keys [weeks days hours minutes seconds ms us ticks]
+         :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0,
+                 ms    0, us 0, ticks 0}
+         :as    breakdown} (ticks->breakdown ticks)
+        ticks (breakdown->ticks
+                (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
+        seconds-fraction (double (/ ticks ticks-per-second))
+        total-seconds (+ seconds seconds-fraction)
+        weeks-part (when (or show-zeros? (not (zero? weeks)))
+                     (str weeks "w"))
+        days-part (when (or show-zeros? (not (zero? days)))
+                    (str days "d"))
+        hours-part (when (or show-zeros? (not (zero? hours)))
+                     (str (f2 hours) "h"))
+        minutes-part (when (or show-zeros? (not (zero? minutes)))
+                       (str (f2 minutes) "m"))
+        seconds-part (when (or show-zeros? (not (zero? total-seconds)))
+                       (str (format (str "%0" (+ 3 fraction-precision)
+                                      "." fraction-precision "f")
+                              total-seconds) "s"))]
+    (str weeks-part days-part hours-part minutes-part seconds-part)))
 
 (s/fdef format-ticks
-  :args (s/cat :ticks ::ticks
-          :seconds-fraction-precision (s/? ::seconds-fraction-precision))
+  :args (s/cat :format-map (s/keys :req [::ticks]
+                             :opt [::fraction-precision ::show-zeros?]))
   :ret string?)
 
 (defn- read-number
@@ -524,33 +544,53 @@
 (defn parse-ticks
   "Parses a `ticks-string` into ticks.
   
-  Accepts format: W<weeks>D<days>T<HH>:<MM>:<SS>.<ms>.<us>:<ticks>
+  Accepts format: <weeks>w<days>d<hours>h<minutes>m<seconds>s
   
   Returns ticks as a long or an anomaly if parsing fails.
   
   Example:
-    (parse-ticks \"W1D2T03:45:30.123.456:789\")"
+    (parse-ticks \"1w2d03h45m30.123456s\")"
   [ticks-string]
   (let [s ticks-string
-        w? (str/includes? s "W")
-        d? (str/includes? s "D")
-        s (if-not d? (str "D" s) s)
-        s (str/split s #"W|D|T")
-        s (if w? (rest s) s)
-        [s1 s2 s3] s
         anomaly {::anomalies/category ::anomalies/exception
                  ::anomalies/message  "bad ticks-string"
                  ::anomalies/fn       (var parse-ticks)}
-        weeks (if w? (read-number s1 anomaly 0) 0)
-        days (if d? (read-number s2 anomaly 0) 0)
-        ticks (when s3 (parse-time s3))
-        not-all-longs? (some false? (map m/long? [weeks days ticks]))]
-    (if not-all-longs?
+        ;; Parse components using regex to extract number-unit pairs
+        weeks (if-let [match (re-find #"(\d+)w" s)]
+                (read-number (second match) anomaly 0)
+                0)
+        days (if-let [match (re-find #"(\d+)d" s)]
+               (read-number (second match) anomaly 0)
+               0)
+        hours (if-let [match (re-find #"(\d+)h" s)]
+                (read-number (second match) anomaly 0)
+                0)
+        minutes (if-let [match (re-find #"(\d+)m" s)]
+                  (read-number (second match) anomaly 0)
+                  0)
+        seconds-match (re-find #"([0-9]+(?:\.[0-9]+)?)s" s)
+        seconds-decimal (if seconds-match
+                          (read-number (second seconds-match) anomaly 0.0)
+                          0.0)
+        seconds-whole (if (number? seconds-decimal) (long seconds-decimal) 0)
+        seconds-fractional (if (number? seconds-decimal)
+                             (- seconds-decimal seconds-whole)
+                             0.0)
+        fractional-ticks (if (number? seconds-fractional)
+                           (long (* seconds-fractional ticks-per-second))
+                           0)
+        not-all-longs? (some false?
+                         (map m/long?
+                           [weeks days hours minutes seconds-whole]))]
+    (if (or not-all-longs? (and seconds-match (not (number? seconds-decimal))))
       anomaly
       (breakdown->ticks
-        {::weeks weeks
-         ::days  days
-         ::ticks ticks}))))
+        {::weeks   weeks
+         ::days    days
+         ::hours   hours
+         ::minutes minutes
+         ::seconds seconds-whole
+         ::ticks   fractional-ticks}))))
 
 (s/fdef parse-ticks
   :args (s/cat :ticks-string string?)
@@ -603,15 +643,15 @@
 (defn date->breakdown
   "Breaks down a tick `date` into calendar and time components.
   
-  Returns a map with ::year, ::month, ::day-of-month and optionally
-  time units like ::hours, ::minutes, etc.
+  Returns a map with `::year`, `::month`, `::day-of-month` and optionally
+  time units like `::hours`, `::minutes`, etc.
   
   Optional `date-form` set specifies which components to include.
   Use empty set #{} for just date components.
   
   Example:
     (date->breakdown date-2020)
-    ; => {::year 2020 ::month 1 ::day-of-month 1}"
+    ; => {`::year` 2020 `::month` 1 `::day-of-month` 1}"
   ([date] (date->breakdown date (set date-breakdown-all)))
   ([date date-form]
    (let [[year ticks] (if (> date date-2045)
@@ -656,13 +696,13 @@
 (defn breakdown->date
   "Converts a `date-breakdown` map to tick date.
   
-  Accepts a map with ::year, ::month, ::day-of-month and optional
+  Accepts a map with `::year`, `::month`, `::day-of-month` and optional
   time components. Returns ticks from epoch (2070).
   
-  Date must be between 1814-07-08 and 2325-06-28.
+  The date must be between 1814-07-08 and 2325-06-28.
   
   Example:
-    (breakdown->date {::year 2020 ::month 1 ::day-of-month 1})"
+    (breakdown->date {`::year` 2020 `::month` 1 `::day-of-month` 1})"
   [date-breakdown]
   (let [{::keys [year month day-of-month]} date-breakdown
         ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))
@@ -736,7 +776,7 @@
 
 (s/fdef format-date
   :args (s/cat :date ::date
-          :seconds-fraction-precision (s/? ::seconds-fraction-precision))
+          :seconds-fraction-precision (s/? ::fraction-precision))
   :ret string?)
 
 (defn parse-date
@@ -1045,9 +1085,9 @@
          :anomaly ::anomalies/anomaly))
 
 (defn date-range->prorated-months
-  "Converts date range to prorated (fractional) months.
+  "Converts date range to the prorated (fractional) months.
   
-  Accounts for partial months at start and end of the range.
+  Accounts for partial months at the start and end of the range.
   
   Example:
     (date-range->prorated-months [start end])
@@ -1076,50 +1116,149 @@
 (defn format-duration
   "Formats `duration` as a human-readable string.
 
-  Format: Y<years>M<months>W<weeks>D<days>T<HH>:<MM>:<SS>.<ms>.<us>:<ticks>
+  Format:
+  <years>y<months>mo<weeks>W<days>D<hours>h<minutes>m<seconds>s.<fractional-seconds>
 
-  Optional `seconds-fraction-precision` shows seconds as decimal.
+  Takes a map with:
+  - ::duration (required): The [months ticks] duration tuple to format
+  - ::fraction-precision (optional): Shows fractional parts with specified
+         precision. Default is 6.
+  - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes,
+         and seconds. Default is false (hide zeros).
+  - ::show-average-years? (optional): When true, shows ticks as
+         average years (ay) instead of detailed time components.
+         Default is false.
 
   Example:
-    (format-duration [3 123456789])
-    ; => \"Y0M3W0D1T10:23:45.123.456:789\"
+    (format-duration {::duration [3 123456789]})
+    ; => \"3mo00.107917s\"
 
-    (format-duration [15 123456789] 4)
-    ; => \"Y1M3W0D1T10:23:45.1235\""
-  ([duration]
-   (let [[months ticks] duration
-         {::keys [months years]} (months->breakdown months)]
-     (str "Y" years "M" months (format-ticks ticks))))
-  ([duration seconds-fraction-precision]
-   (let [[months ticks] duration
-         {::keys [months years]} (months->breakdown months)]
-     (str "Y" years "M" months (format-ticks ticks seconds-fraction-precision)))))
+    (format-duration {::duration [15 123456789] ::fraction-precision 4})
+    ; => \"1y3mo00.1079s\"
+    
+    (format-duration {::duration [3 123456789] ::show-zeros? true})
+    ; => \"0y3mo0w0d00h00m00.107917s\"
+    
+    (format-duration {::duration [3 123456789] ::show-average-years? true})
+    ; => \"3mo0.000003ay\"
+    
+    (format-duration {::duration [15 123456789]
+                      ::fraction-precision 4
+                      ::show-average-years? true})
+    ; => \"1y3mo0.0000ay\"
+    "
+  [{::keys [duration fraction-precision show-average-years? show-zeros?]
+    :or    {fraction-precision  6
+            show-average-years? false
+            show-zeros?         false}}]
+  (let [[months ticks] duration
+        {::keys [months years]} (months->breakdown months)
+        years-part (when (or show-zeros? (not (zero? years)))
+                     (str years "y"))
+        months-part (when (or show-zeros? (not (zero? months)))
+                      (str months "mo"))
+        ticks-part (if show-average-years?
+                     (let [average-years (ticks->average-years ticks)]
+                       (when (or show-zeros? (not (zero? average-years)))
+                         (str (format (str "%." fraction-precision "f")
+                                average-years)
+                           "ay")))
+                     (format-ticks
+                       (cond->
+                         {::ticks ticks ::show-zeros? show-zeros?}
+                         fraction-precision (assoc ::fraction-precision
+                                              fraction-precision))))]
+    (str years-part months-part ticks-part)))
 
 (s/fdef format-duration
-  :args (s/cat :duration ::duration
-          :seconds-fraction-precision (s/? ::seconds-fraction-precision))
+  :args (s/cat :format-map (s/keys :req [::duration]
+                             :opt [::fraction-precision
+                                   ::show-average-years?
+                                   ::show-zeros?]))
   :ret string?)
 
-;;;YEARLY PERIODS
-(defn ticks->yearly-periods
-  "Converts `ticks` to period in average years.
+(defn parse-duration
+  "Parses a `duration-string` into a duration tuple [months ticks].
   
-  Uses average year length of 365.2425 days."
+  Accepts formats produced by format-duration:
+  - Standard: \"3mo20w01h18m17.923283s\"
+  - With years: \"1y3mo20w01h18m17.9233s\"  
+  - With average years: \"3mo0.000003ay\"
+  - With show-zeros: \"0y3mo0w0d00h00m00.107917s\"
+  
+  Returns [months ticks] tuple or an anomaly if parsing fails.
+  
+  Example:
+    (parse-duration \"1y3mo20w01h18m17.9233s\")
+    ; => [15 13843198424235230]"
+  [duration-string]
+  (let [s duration-string
+        anomaly {::anomalies/category ::anomalies/exception
+                 ::anomalies/message  "bad duration-string"
+                 ::anomalies/fn       (var parse-duration)}
+        ;; Parse years and months (handle negative values)
+        years (if-let [match (re-find #"(-?\d+)y" s)]
+                (let [parsed (read-number (second match) anomaly 0)]
+                  (if (m/long? parsed) parsed 0))
+                0)
+        months-only (if-let [match (re-find #"(-?\d+)mo" s)]
+                      (let [parsed (read-number (second match) anomaly 0)]
+                        (if (m/long? parsed) parsed 0))
+                      0)
+        total-months (+ (* years 12) months-only)
+        ;; Check for average years format (handle negative values)
+        average-years-match (re-find #"(-?[0-9]+(?:\.[0-9]+)?)ay" s)
+        average-years (when average-years-match
+                        (let [parsed (read-number (second average-years-match)
+                                       anomaly
+                                       0.0)]
+                          (when (number? parsed) parsed)))
+        ;; Parse the tick's portion (everything that's not
+        ;; years/months/average-years)
+        ticks-string (-> s
+                       (str/replace #"-?\d+y" "")
+                       (str/replace #"-?\d+mo" "")
+                       (str/replace #"-?[0-9]+(?:\.[0-9]+)?ay" ""))
+        ticks (if average-years
+                ;; Convert the average years to number of ticks
+                (long (* average-years ticks-per-average-year))
+                ;; Parse detailed ticks format
+                (if (str/blank? ticks-string)
+                  0
+                  (parse-ticks ticks-string)))
+        not-all-valid? (or (some false?
+                             (map m/long? [years months-only total-months]))
+                         (anomalies/anomaly? ticks)
+                         (and average-years (not (number? average-years))))]
+    (if not-all-valid?
+      anomaly
+      [total-months ticks])))
+
+(s/fdef parse-duration
+  :args (s/cat :duration-string string?)
+  :ret (s/or :anomaly ::anomalies/anomaly
+         :duration ::duration))
+
+;;;AVERAGE YEARS
+(defn ticks->average-years
+  "Converts `ticks` to average years.
+  
+  Uses the average year length of 365.2425 days."
   [ticks]
   (/ ticks (double ticks-per-average-year)))
 
-(s/fdef ticks->yearly-periods
+(s/fdef ticks->average-years
   :args (s/cat :ticks ::ticks)
-  :ret ::instant/yearly-periods)
+  :ret ::instant/average-years)
 
-(defn date-range->yearly-periods
-  "Converts `date-range` to period in average years."
+(defn date-range->average-years
+  "Converts `date-range` to average years."
   [[start-date end-date]]
   (/ (- end-date (double start-date)) ticks-per-average-year))
 
-(s/fdef date-range->yearly-periods
+(s/fdef date-range->average-years
   :args (s/cat :date-range ::date-range)
-  :ret ::instant/yearly-periods)
+  :ret ::instant/average-years)
 
 ;;;PREDICATES
 (defn weekend?
