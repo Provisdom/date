@@ -481,64 +481,83 @@
   "Formats `ticks` as a human-readable string.
   
   Format: <weeks>w<days>dh<hours>m<minutes>s<seconds>.<fractional-seconds>
+          or <average-years>ay when `show-average-years?` is true
   
-  Takes a map with:
-  - ::ticks (required): The ticks value to format
-  - ::seconds-fraction-precision (optional): Shows seconds as decimal with
-       specified precision. Default is 6.
+  Function takes a map with:
+  - ::ticks (required): The ticks' value to format
+  - ::fraction-precision (optional): Shows fractional parts with specified
+       precision. Default is 6.
   - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes,
        and seconds. Default is false (hide zeros).
+  - ::show-average-years? (optional): When true, shows ticks as average years
+       (ay) instead of detailed time components. Default is true.
   
   Example:
     (format-ticks {`::ticks` 123456789})
-    ; => \"00.107917s\"
+    ; => \"0.000003ay\"
 
-    (format-ticks {`::seconds-fraction-precision` 4, `::ticks` 123456789})
+    (format-ticks {`::show-average-years?` false
+                   `::ticks` 123456789})
+    ; => \"00.107917s\"
+    
+    (format-ticks {`::fraction-precision` 4
+                   `::show-average-years?` false
+                   `::ticks` 123456789})
     ; => \"00.1079s\"
     
-    (format-ticks {`::show-zeros?` true, `::ticks` 123456789})
-    ; => \"0w0d00h00m00.107917s\"
-    
-    (format-ticks {`::seconds-fraction-precision` 4
+    (format-ticks {`::show-average-years?` false
                    `::show-zeros?` true
-                   `::ticks` 123456789 })
-    ; => \"0w0d00h00m00.1079s\"
+                   `::ticks` 123456789})
+    ; => \"0w0d00h00m00.107917s\"
     "
-  [{::keys [ticks fraction-precision show-zeros?]
-    :or    {fraction-precision 6, show-zeros? false}}]
-  (let [f2 (partial format "%02d")
-        {::keys [weeks days hours minutes seconds ms us ticks]
-         :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0,
-                 ms    0, us 0, ticks 0}
-         :as    breakdown} (ticks->breakdown ticks)
-        ticks (breakdown->ticks
-                (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
-        seconds-fraction (double (/ ticks ticks-per-second))
-        total-seconds (+ seconds seconds-fraction)
-        weeks-part (when (or show-zeros? (not (zero? weeks)))
-                     (str weeks "w"))
-        days-part (when (or show-zeros? (not (zero? days)))
-                    (str days "d"))
-        hours-part (when (or show-zeros? (not (zero? hours)))
-                     (str (f2 hours) "h"))
-        minutes-part (when (or show-zeros? (not (zero? minutes)))
-                       (str (f2 minutes) "m"))
-        seconds-part (when (or show-zeros? (not (zero? total-seconds)))
-                       (str (format (str "%0" (+ 3 fraction-precision)
-                                      "." fraction-precision "f")
-                              total-seconds) "s"))]
-    (str weeks-part days-part hours-part minutes-part seconds-part)))
+  [{::keys [ticks fraction-precision show-zeros? show-average-years?]
+    :or    {fraction-precision  6
+            show-zeros?         false
+            show-average-years? true}}]
+  (if show-average-years?
+    ;; Format as average years
+    (let [average-years (ticks->average-years ticks)]
+      (if (or show-zeros? (not (zero? average-years)))
+        (str (format (str "%." fraction-precision "f") average-years) "ay")
+        ""))
+    ;; Format as detailed time components
+    (let [f2 (partial format "%02d")
+          {::keys [weeks days hours minutes seconds ms us ticks]
+           :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0,
+                   ms    0, us 0, ticks 0}
+           :as    breakdown} (ticks->breakdown ticks)
+          ticks (breakdown->ticks
+                  (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
+          seconds-fraction (double (/ ticks ticks-per-second))
+          total-seconds (+ seconds seconds-fraction)
+          weeks-part (when (or show-zeros? (not (zero? weeks)))
+                       (str weeks "w"))
+          days-part (when (or show-zeros? (not (zero? days)))
+                      (str days "d"))
+          hours-part (when (or show-zeros? (not (zero? hours)))
+                       (str (f2 hours) "h"))
+          minutes-part (when (or show-zeros? (not (zero? minutes)))
+                         (str (f2 minutes) "m"))
+          seconds-part (when (or show-zeros? (not (zero? total-seconds)))
+                         (str (format (str "%0" (+ 3 fraction-precision)
+                                        "." fraction-precision "f")
+                                total-seconds) "s"))]
+      (str weeks-part days-part hours-part minutes-part seconds-part))))
 
 (s/fdef format-ticks
   :args (s/cat :format-map (s/keys :req [::ticks]
-                             :opt [::fraction-precision ::show-zeros?]))
+                             :opt [::fraction-precision
+                                   ::show-average-years?
+                                   ::show-zeros?]))
   :ret string?)
 
 (defn- read-number
   [s anomaly else]
   (if (and s (not= "" s))
     (try (let [s2 (strings/trim-start s "0")
-               s2 (if (= s2 "") "0" s2)]
+               s2 (if (= s2 "") "0" s2)
+               ;; Handle case where trimming leaves ".xxx" 
+               s2 (if (str/starts-with? s2 ".") (str "0" s2) s2)]
            (read-string s2))
       (catch Exception _ anomaly))
     else))
@@ -546,53 +565,65 @@
 (defn parse-ticks
   "Parses a `ticks-string` into ticks.
   
-  Accepts format: <weeks>w<days>d<hours>h<minutes>m<seconds>s
+  Accepts formats:
+  - Average years: <average-years>ay (e.g., \"0.383527ay\")
+  - Detailed time: <weeks>w<days>d<hours>h<minutes>m<seconds>s
   
   Returns ticks as a long or an anomaly if parsing fails.
   
-  Example:
+  Examples:
+    (parse-ticks \"0.383527ay\")
     (parse-ticks \"1w2d03h45m30.123456s\")"
   [ticks-string]
   (let [s ticks-string
         anomaly {::anomalies/category ::anomalies/exception
                  ::anomalies/message  "bad ticks-string"
-                 ::anomalies/fn       (var parse-ticks)}
-        ;; Parse components using regex to extract number-unit pairs
-        weeks (if-let [match (re-find #"(\d+)w" s)]
-                (read-number (second match) anomaly 0)
-                0)
-        days (if-let [match (re-find #"(\d+)d" s)]
-               (read-number (second match) anomaly 0)
-               0)
-        hours (if-let [match (re-find #"(\d+)h" s)]
-                (read-number (second match) anomaly 0)
-                0)
-        minutes (if-let [match (re-find #"(\d+)m" s)]
-                  (read-number (second match) anomaly 0)
-                  0)
-        seconds-match (re-find #"([0-9]+(?:\.[0-9]+)?)s" s)
-        seconds-decimal (if seconds-match
-                          (read-number (second seconds-match) anomaly 0.0)
-                          0.0)
-        seconds-whole (if (number? seconds-decimal) (long seconds-decimal) 0)
-        seconds-fractional (if (number? seconds-decimal)
-                             (- seconds-decimal seconds-whole)
-                             0.0)
-        fractional-ticks (if (number? seconds-fractional)
-                           (long (* seconds-fractional ticks-per-second))
-                           0)
-        not-all-longs? (some false?
-                         (map m/long?
-                           [weeks days hours minutes seconds-whole]))]
-    (if (or not-all-longs? (and seconds-match (not (number? seconds-decimal))))
-      anomaly
-      (breakdown->ticks
-        {::weeks   weeks
-         ::days    days
-         ::hours   hours
-         ::minutes minutes
-         ::seconds seconds-whole
-         ::ticks   fractional-ticks}))))
+                 ::anomalies/fn       (var parse-ticks)}]
+    ;; Check if this is average years format
+    (if (str/ends-with? s "ay")
+      ;; Parse average years format
+      (let [average-years-str (subs s 0 (- (count s) 2))
+            average-years (read-number average-years-str anomaly nil)]
+        (if (number? average-years)
+          (long (* average-years ticks-per-average-year))
+          anomaly))
+      ;; Parse detailed time format
+      (let [;; Parse components using regex to extract number-unit pairs
+            weeks (if-let [match (re-find #"(\d+)w" s)]
+                    (read-number (second match) anomaly 0)
+                    0)
+            days (if-let [match (re-find #"(\d+)d" s)]
+                   (read-number (second match) anomaly 0)
+                   0)
+            hours (if-let [match (re-find #"(\d+)h" s)]
+                    (read-number (second match) anomaly 0)
+                    0)
+            minutes (if-let [match (re-find #"(\d+)m" s)]
+                      (read-number (second match) anomaly 0)
+                      0)
+            seconds-match (re-find #"([0-9]+(?:\.[0-9]+)?)s" s)
+            seconds-decimal (if seconds-match
+                              (read-number (second seconds-match) anomaly 0.0)
+                              0.0)
+            seconds-whole (if (number? seconds-decimal) (long seconds-decimal) 0)
+            seconds-fractional (if (number? seconds-decimal)
+                                 (- seconds-decimal seconds-whole)
+                                 0.0)
+            fractional-ticks (if (number? seconds-fractional)
+                               (long (* seconds-fractional ticks-per-second))
+                               0)
+            not-all-longs? (some false?
+                             (map m/long?
+                               [weeks days hours minutes seconds-whole]))]
+        (if (or not-all-longs? (and seconds-match (not (number? seconds-decimal))))
+          anomaly
+          (breakdown->ticks
+            {::weeks   weeks
+             ::days    days
+             ::hours   hours
+             ::minutes minutes
+             ::seconds seconds-whole
+             ::ticks   fractional-ticks}))))))
 
 (s/fdef parse-ticks
   :args (s/cat :ticks-string string?)
@@ -1159,17 +1190,13 @@
                      (str years "y"))
         months-part (when (or show-zeros? (not (zero? months)))
                       (str months "mo"))
-        ticks-part (if show-average-years?
-                     (let [average-years (ticks->average-years ticks)]
-                       (when (or show-zeros? (not (zero? average-years)))
-                         (str (format (str "%." fraction-precision "f")
-                                average-years)
-                           "ay")))
-                     (format-ticks
-                       (cond->
-                         {::ticks ticks ::show-zeros? show-zeros?}
-                         fraction-precision (assoc ::fraction-precision
-                                              fraction-precision))))]
+        ticks-part (format-ticks
+                     (cond->
+                       {::show-average-years? show-average-years?
+                        ::show-zeros?         show-zeros?
+                        ::ticks               ticks}
+                       fraction-precision (assoc ::fraction-precision
+                                            fraction-precision)))]
     (str years-part months-part ticks-part)))
 
 (s/fdef format-duration
@@ -1188,11 +1215,17 @@
   - With average years: \"3mo0.000003ay\"
   - With show-zeros: \"0y3mo0w0d00h00m00.107917s\"
   
+  The ticks portion is parsed using parse-ticks, which automatically
+  handles both detailed time format and average years format.
+  
   Returns [months ticks] tuple or an anomaly if parsing fails.
   
-  Example:
+  Examples:
     (parse-duration \"1y3mo20w01h18m17.9233s\")
-    ; => [15 13843198424235230]"
+    ; => [15 13843198424235230]
+    
+    (parse-duration \"3mo0.383527ay\")
+    ; => [3 13843198424235230]"
   [duration-string]
   (let [s duration-string
         anomaly {::anomalies/category ::anomalies/exception
@@ -1208,30 +1241,17 @@
                         (if (m/long? parsed) parsed 0))
                       0)
         total-months (+ (* years 12) months-only)
-        ;; Check for average years format (handle negative values)
-        average-years-match (re-find #"(-?[0-9]+(?:\.[0-9]+)?)ay" s)
-        average-years (when average-years-match
-                        (let [parsed (read-number (second average-years-match)
-                                       anomaly
-                                       0.0)]
-                          (when (number? parsed) parsed)))
-        ;; Parse the tick's portion (everything that's not
-        ;; years/months/average-years)
+        ;; Parse the ticks portion (everything that's not years/months)
+        ;; parse-ticks now handles both detailed time format and average years
         ticks-string (-> s
                        (str/replace #"-?\d+y" "")
-                       (str/replace #"-?\d+mo" "")
-                       (str/replace #"-?[0-9]+(?:\.[0-9]+)?ay" ""))
-        ticks (if average-years
-                ;; Convert the average years to number of ticks
-                (long (* average-years ticks-per-average-year))
-                ;; Parse detailed ticks format
-                (if (str/blank? ticks-string)
-                  0
-                  (parse-ticks ticks-string)))
+                       (str/replace #"-?\d+mo" ""))
+        ticks (if (str/blank? ticks-string)
+                0
+                (parse-ticks ticks-string))
         not-all-valid? (or (some false?
                              (map m/long? [years months-only total-months]))
-                         (anomalies/anomaly? ticks)
-                         (and average-years (not (number? average-years))))]
+                         (anomalies/anomaly? ticks))]
     (if not-all-valid?
       anomaly
       [total-months ticks])))

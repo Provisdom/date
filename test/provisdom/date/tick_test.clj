@@ -117,21 +117,48 @@
 
 (deftest format-ticks-test
   (is (spec-check tick/format-ticks))
+  ;; Test detailed time format (show-average-years? false)
   (is= "20w01h18m17.923283s"
-       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 6}))
+       (tick/format-ticks {::tick/fraction-precision 6
+                           ::tick/show-average-years? false
+                           ::tick/ticks 13843198424235230}))
   (is= "52w1d05h49m12.000000s"
-    (tick/format-ticks {::tick/ticks tick/ticks-per-average-year ::tick/fraction-precision 6}))
+    (tick/format-ticks {::tick/fraction-precision 6
+                        ::tick/show-average-years? false
+                        ::tick/ticks tick/ticks-per-average-year}))
   (is= "20w01h18m17.9233s"
-       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 4}))
+       (tick/format-ticks {::tick/fraction-precision 4
+                           ::tick/show-average-years? false
+                           ::tick/ticks 13843198424235230}))
   (is= "20w01h18m17.92328254s"
-       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 8}))
+       (tick/format-ticks {::tick/fraction-precision 8
+                           ::tick/show-average-years? false
+                           ::tick/ticks 13843198424235230}))
   (is= "20w01h18m17.923282543706293s"
-       (tick/format-ticks {::tick/ticks 13843198424235230 ::tick/fraction-precision 15}))
+       (tick/format-ticks {::tick/fraction-precision 15
+                           ::tick/show-average-years? false
+                           ::tick/ticks 13843198424235230}))
   (is= "481w5d09h34m51.375291s"
-       (tick/format-ticks {::tick/ticks 333333333333333333 ::tick/fraction-precision 6})))
+       (tick/format-ticks {::tick/fraction-precision 6
+                           ::tick/show-average-years? false
+                           ::tick/ticks 333333333333333333}))
+  ;; Test average years format (default show-average-years? true)
+  (is= "0.383456ay"
+       (tick/format-ticks {::tick/fraction-precision 6
+                           ::tick/ticks 13843198424235230}))
+  (is= "1.000000ay"
+       (tick/format-ticks {::tick/fraction-precision 6
+                           ::tick/ticks tick/ticks-per-average-year}))
+  (is= "0.3835ay"
+       (tick/format-ticks {::tick/fraction-precision 4
+                           ::tick/ticks 13843198424235230}))
+  (is= "9.23331542ay"
+       (tick/format-ticks {::tick/fraction-precision 8
+                           ::tick/ticks 333333333333333333})))
 
 (deftest parse-ticks-test
   (is (spec-check tick/parse-ticks))
+  ;; Test detailed time format
   (is= 13843198424235752
        (tick/parse-ticks "20w01h18m17.923283s"))
   (is= 5374424235752
@@ -146,7 +173,23 @@
   (is= 3333333333615 (tick/parse-ticks "48m33.752914s"))
   (is= 333333333333332903
        (tick/parse-ticks "481w5d09h34m51.375291s"))
-  (is= 333333333333000 (tick/parse-ticks "3d08h56m15.291375s")))
+  (is= 333333333333000 (tick/parse-ticks "3d08h56m15.291375s"))
+  ;; Test average years format
+  (is= tick/ticks-per-average-year (tick/parse-ticks "1.000000ay"))
+  (is= 36101153088000000 (tick/parse-ticks "1ay"))
+  (is= 13845766940381376 (tick/parse-ticks "0.383527ay"))
+  (is= 333333318324726720 (tick/parse-ticks "9.233315ay"))
+  ;; Test round-trip compatibility (default show-average-years? true)
+  (let [original-ticks 13843198424235230
+        formatted (tick/format-ticks {::tick/ticks original-ticks})
+        parsed (tick/parse-ticks formatted)]
+    (is= 13843203758512128 parsed))
+  ;; Test round-trip compatibility (show-average-years? false)
+  (let [original-ticks 13843198424235230
+        formatted (tick/format-ticks {::tick/show-average-years? false
+                                      ::tick/ticks original-ticks})
+        parsed (tick/parse-ticks formatted)]
+    (is= 13843198424235752 parsed)))
 
 ;;;MONTHS
 (deftest months->breakdown-test
