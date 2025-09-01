@@ -3,7 +3,7 @@
            provisdom/math           {:git/url "https://github.com/Provisdom/math.git"
                                      :sha "fe320fa7264d259e49286a7f6a4d50f211521d43"}
            provisdom/utility-belt   {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                     :sha "83ba534c85ba718f61ab4c3cd657aaf8d403e280"}}
+                                     :sha "f9048cc47753bffe8c44746e718d1c3671ce35bb"}}
  :aliases {:local           {:override-deps {provisdom/math         {:local/root "../math"}
                                              provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test            {:extra-paths ["test"]
