@@ -16,6 +16,12 @@
     - Minutes until month end:
         (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)
 
+    **Creating New Dates**: Dates and ticks combine through simple arithmetic to create new dates
+      - 5 days after 2020-01-01: (+ date-2020 (* 5 ticks-per-day))
+      - 6 hours after 2020-01-01: (+ date-2020 (* 6 ticks-per-hour))
+      - 1 week before 2020-01-01: (- date-2020 ticks-per-week)
+      - 2 days and 3 hours after 2020-01-01: (+ date-2020 (* 2 ticks-per-day) (* 3 ticks-per-hour))
+
   Precision Design:
   Tick size ensures temporal models maintain accuracy during partitioning. The tick
   value makes 400 years divisible by microseconds and by 2^12 and all integers 1-16.
