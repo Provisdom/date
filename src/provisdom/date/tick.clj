@@ -9,20 +9,57 @@
   - 'months' form a separate unit since month lengths vary
   - All units decompose into structured maps for flexible manipulation
 
-  Common Operations:
-  Most date calculations use basic arithmetic. For example:
-    - Minutes from month start:
-        (/ (- date (start-of-month date)) ticks-per-minute)
-    - Minutes until month end:
-        (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)
+  Quick Start Guide:
+  Choose your approach based on precision and performance needs:
 
-    **Creating New Dates**: Dates and ticks combine through simple arithmetic to create new dates
-      - 5 days after 2020-01-01: (+ date-2020 (* 5 ticks-per-day))
-      - 6 hours after 2020-01-01: (+ date-2020 (* 6 ticks-per-hour))
-      - 1 week before 2020-01-01: (- date-2020 ticks-per-week)
-      - 2 days and 3 hours after 2020-01-01: (+ date-2020 (* 2 ticks-per-day) (* 3 ticks-per-hour))
+  Calendar Approach:
+  - Use for: exact date arithmetic, user-facing dates, regulatory compliance
+  - Benefits: exact date landing, required when model uses real quarterly/monthly data
+  - Trade-offs: more complex calculations, variable time steps
 
-  Precision Design:
+  Average Years Approach:
+  - Use for: financial calculations, approximate durations, statistical analysis
+  - Benefits: better performance (pre-calculations possible), equal time steps enable model optimization
+  - Trade-offs: may land on approximate dates (off by hours/days)
+
+  Two Types of Date Representations:
+  1. Calendar Dates - Exact calendar-based dates using precise calendar arithmetic:
+     - Handle actual calendar complexities like leap years, varying month lengths
+     - Use date->breakdown and breakdown->date functions for conversion
+     - Format: YYYY-MM-DDTHH:MM:SS.mmm.uuu:ttt (e.g., '2020-01-01T10:30:00.000.000:0')
+     - Support exact date arithmetic for specific calendar operations
+
+  2. Average Years - Simplified time calculations using statistical averages:
+     - Based on average Gregorian year of 365.2425 days (ticks-per-average-year)
+     - Used for approximate durations, financial calculations, and time estimates
+     - Format: <number>ay (e.g., '0.383527ay' for average years)
+     - Converted using ticks->average-years, date-range->average-years, and parsing/formatting functions
+
+  Common Patterns:
+  
+  Date Arithmetic:
+    - Create new dates with simple arithmetic:
+        (+ date-2020 (* 5 ticks-per-day))           ; 5 days after 2020-01-01
+        (+ date-2020 (* 6 ticks-per-hour))          ; 6 hours after 2020-01-01
+        (- date-2020 ticks-per-week)                ; 1 week before 2020-01-01
+        (+ date-2020 (* 2 ticks-per-day) (* 3 ticks-per-hour))  ; 2 days + 3 hours after
+    
+    - Calculate time differences:
+        (/ (- date (start-of-month date)) ticks-per-minute)      ; minutes from month start
+        (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)  ; minutes until month end
+
+  System Conversions:
+    - Calendar dates to/from components:
+        (date->breakdown date-2020)
+        ; => {::year 2020 ::month 1 ::day-of-month 1}
+        (breakdown->date {::year 2020 ::month 6 ::day-of-month 15})
+        ; => -18252672000000000  ; tick value for June 15, 2020
+    
+    - Average years conversions:
+        (ticks->average-years (* 365 ticks-per-day))  ; => 0.9993  ; ~1 year
+        (* 1.5 ticks-per-average-year)                ; => 54151729632000000  ; 1.5 years
+
+  Technical Design:
   Tick size ensures temporal models maintain accuracy during partitioning. The tick
   value makes 400 years divisible by microseconds and by 2^12 and all integers 1-16.
   Following Gregorian leap year rules (every 4 years, except centuries unless
