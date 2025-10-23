@@ -1,9 +1,9 @@
 {:paths   ["src"]
  :deps    {org.clojure/data.int-map {:mvn/version "1.3.0"}
            provisdom/math           {:git/url "https://github.com/Provisdom/math.git"
-                                     :sha "b3a7278010575d45786cb6d06c16247820636ef2"}
+                                     :sha "4ca0dfb4d31f91ee1784fe9534a94037de9814a8"}
            provisdom/utility-belt   {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                     :sha "350e5e1bd7b3b0039e75fb53979e1c65c6ab1a10"}}
+                                     :sha "789b120ab39c3c9cc9afd78fdf8a269cb22b424d"}}
  :aliases {:local           {:override-deps {provisdom/math         {:local/root "../math"}
                                              provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test            {:extra-paths ["test"]
