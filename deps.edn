@@ -1,16 +1,16 @@
 {:paths   ["src"]
  :deps    {org.clojure/data.int-map {:mvn/version "1.3.0"}
            provisdom/math           {:git/url "https://github.com/Provisdom/math.git"
-                                     :sha "d674f6a6b84903ad93330c5a98de2806b9878758"}
+                                     :sha "1934ed2794b5517fc01af31eb7e2f4e70a967f1e"}
            provisdom/utility-belt   {:git/url "https://github.com/Provisdom/utility-belt.git"
-                                     :sha "5ada4da1fa8dedceef973b4615a6f0ff398ea3aa"}}
+                                     :sha "9b655cf06a6086dc39ce62ee49ea6d13002b2260"}}
  :aliases {:local           {:override-deps {provisdom/math         {:local/root "../math"}
                                              provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test            {:extra-paths ["test"]
                              :extra-deps  {orchestra/orchestra    {:mvn/version "2021.01.01-1"}
                                            org.clojure/test.check {:mvn/version "1.1.1"}
                                            provisdom/test         {:git/url "https://github.com/Provisdom/test.git"
-                                                                   :sha "e64700e138cdcf225ee0ced6aecda6db8207b616"}}}
+                                                                   :sha "c3247f2f593492edd037547bed626549cc190963"}}}
            :test-clj-runner {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.91.1392"}
                                           lambdaisland/kaocha-junit-xml {:mvn/version "1.17.101"}}
                              :main-opts  ["-m" "kaocha.runner"]}}}
