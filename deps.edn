@@ -5,6 +5,7 @@
            provisdom/utility-belt   {:git/url "https://github.com/Provisdom/utility-belt.git"
                                      :sha "c4bcc1478fa8d866baff56ec1bf5c4bb353c5353"}}
  :aliases {:local           {:override-deps {provisdom/math         {:local/root "../math"}
+                                             provisdom/test         {:local/root "../test"}
                                              provisdom/utility-belt {:local/root "../utility-belt"}}}
            :test            {:extra-paths ["test"]
                              :extra-deps  {orchestra/orchestra    {:mvn/version "2021.01.01-1"}
