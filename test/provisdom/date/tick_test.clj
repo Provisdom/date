@@ -16,7 +16,7 @@
 
 ;;;JAVA-DURATION
 (deftest ticks->java-duration-test
-  (is (t/spec-check tick/ticks->java-duration))
+  (t/is-spec-check tick/ticks->java-duration))
   (t/is= Duration/ZERO
        (tick/ticks->java-duration 0))
   (t/is= (Duration/ofNanos tick/min-nanos)
@@ -25,7 +25,7 @@
        (tick/ticks->java-duration m/max-long)))
 
 (deftest java-duration->ticks-by-bounding-test
-  (is (t/spec-check tick/java-duration->ticks-by-bounding))
+  (t/is-spec-check tick/java-duration->ticks-by-bounding))
   (t/is= 0
        (tick/java-duration->ticks-by-bounding Duration/ZERO))
   (t/is= m/min-long
@@ -37,7 +37,7 @@
 
 ;;;INSTANT-MS
 (deftest date->instant-ms-test
-  (is (t/spec-check tick/date->instant-ms))
+  (t/is-spec-check tick/date->instant-ms))
   (t/is= 3155760000000
        (tick/date->instant-ms 0))
   (t/is= 0
@@ -48,7 +48,7 @@
        (tick/date->instant-ms m/max-long)))
 
 (deftest instant-ms->date-test
-  (is (t/spec-check tick/instant-ms->date))
+  (t/is-spec-check tick/instant-ms->date))
   (t/is= 0
        (tick/instant-ms->date 3155760000000))
   (t/is= tick/date-1970
@@ -59,14 +59,14 @@
        (tick/instant-ms->date 11218148144104)))
 
 (deftest ms->instant-ms-by-bounding-test
-  (is (t/spec-check tick/ms->instant-ms-by-bounding))
+  (t/is-spec-check tick/ms->instant-ms-by-bounding))
   (t/is= -4906628144104 (tick/ms->instant-ms-by-bounding m/min-long))
   (t/is= 11218148144104 (tick/ms->instant-ms-by-bounding m/max-long))
   (t/is= 0 (tick/ms->instant-ms-by-bounding 0)))
 
 ;;;INSTANT
 (deftest date->instant-test
-  (is (t/spec-check tick/date->instant))
+  (t/is-spec-check tick/date->instant))
   (t/is= #inst"2070-01-01T00:00:00.000-00:00"
        (tick/date->instant 0))
   (t/is= #inst"1970-01-01T00:00:00.000-00:00"
@@ -77,7 +77,7 @@
        (tick/date->instant m/max-long)))
 
 (deftest instant->date-test
-  (is (t/spec-check tick/instant->date))
+  (t/is-spec-check tick/instant->date))
   (t/is= 0
        (tick/instant->date #inst"2070-01-01T00:00:00.000-00:00"))
   (t/is= tick/date-1970
@@ -88,7 +88,7 @@
        (tick/instant->date #inst"2325-06-28T16:15:44.104-00:00")))
 
 (deftest java-date->instant-by-bounding-test
-  (is (t/spec-check tick/java-date->instant-by-bounding))
+  (t/is-spec-check tick/java-date->instant-by-bounding))
   (t/is= #inst "1814-07-08T07:44:15.896-00:00"
        (tick/java-date->instant-by-bounding #inst"0000-01-01T00:00:00.000-00:00"))
   (t/is= #inst "2325-06-28T16:15:44.104-00:00"
@@ -98,7 +98,7 @@
 
 ;;;TICKS
 (deftest ticks->breakdown-test
-  (is (t/spec-check tick/ticks->breakdown))
+  (t/is-spec-check tick/ticks->breakdown))
   (t/is= #::tick{:weeks 1, :days 6, :hours 15, :minutes 23, :seconds 33,
                :ms    318, :us 504, :ticks 904}
        (tick/ticks->breakdown 1348333636369480))
@@ -106,7 +106,7 @@
        (tick/ticks->breakdown 1348333636369480 #{::tick/days ::tick/us})))
 
 (deftest breakdown->ticks-test
-  (is (t/spec-check tick/breakdown->ticks))
+  (t/is-spec-check tick/breakdown->ticks))
   (t/is= 1348333636369480
        (tick/breakdown->ticks
          #::tick{:weeks 1, :days 6, :hours 15, :minutes 23, :seconds 33,
@@ -116,7 +116,7 @@
          {::tick/days 13, ::tick/us 55413318504, ::tick/ticks 904})))
 
 (deftest format-ticks-test
-  (is (t/spec-check tick/format-ticks))
+  (t/is-spec-check tick/format-ticks))
   ;; Test detailed time format (show-average-years? false)
   (t/is= "20w01h18m17.923283s"
        (tick/format-ticks {::tick/fraction-precision 6
@@ -157,7 +157,7 @@
                            ::tick/ticks 333333333333333333})))
 
 (deftest parse-ticks-test
-  (is (t/spec-check tick/parse-ticks))
+  (t/is-spec-check tick/parse-ticks))
   ;; Test detailed time format
   (t/is= 13843198424235752
        (tick/parse-ticks "20w01h18m17.923283s"))
@@ -193,13 +193,13 @@
 
 ;;;MONTHS
 (deftest months->breakdown-test
-  (is (t/spec-check tick/months->breakdown))
+  (t/is-spec-check tick/months->breakdown))
   (t/is= {::tick/years  43
         ::tick/months 7}
        (tick/months->breakdown 523)))
 
 (deftest breakdown->months-test
-  (is (t/spec-check tick/breakdown->months))
+  (t/is-spec-check tick/breakdown->months))
   (t/is= 523
        (tick/breakdown->months
          {::tick/years  43
@@ -207,11 +207,11 @@
 
 ;;;DATE
 #_(deftest date$-test
-    (is (t/spec-check tick/date$))
+    (t/is-spec-check tick/date$))
     (t/is= -1792793997471048000 (tick/date$)))
 
 (deftest date->breakdown-test
-  (is (t/spec-check tick/date->breakdown))
+  (t/is-spec-check tick/date->breakdown))
   (t/is= #::tick{:year         2070
                :month        1
                :day-of-month 1}
@@ -260,7 +260,7 @@
        (tick/date->breakdown -1654806067200000000)))
 
 (deftest breakdown->date-test
-  (is (t/spec-check tick/breakdown->date))
+  (t/is-spec-check tick/breakdown->date))
   (t/is= 0
        (tick/breakdown->date
          #::tick{:year 2070, :month 1, :day-of-month 1}))
@@ -294,7 +294,7 @@
                  :hours 0, :ticks 0, :minutes 0, :ms 0})))
 
 (deftest java-date->date-by-bounding-test
-  (is (t/spec-check tick/java-date->date-by-bounding))
+  (t/is-spec-check tick/java-date->date-by-bounding))
   (t/is= m/min-long
        (tick/java-date->date-by-bounding #inst"0000-01-01T00:00:00.000-00:00"))
   (t/is= m/max-long
@@ -303,7 +303,7 @@
        (tick/java-date->date-by-bounding #inst"2070-01-01T00:00:00.000-00:00")))
 
 (deftest date-breakdown?-test
-  (is (t/spec-check tick/date-breakdown?))
+  (t/is-spec-check tick/date-breakdown?))
   (is (tick/date-breakdown?
         #::tick{:us    0, :month 3, :seconds 0, :day-of-month 1, :year 2024,
                 :hours 0, :ticks 0, :minutes 0, :ms 0}))
@@ -312,7 +312,7 @@
                     :year 2024, :hours 0, :ticks 0, :minutes 0, :ms 0})))
 
 (deftest format-date-test
-  (is (t/spec-check tick/format-date))
+  (t/is-spec-check tick/format-date))
   (t/is= "2031-08-28T13:30:07.671.748:258"
        (tick/format-date -1384319842423520030))
   (t/is= "2031-08-28T13:30:07.6717"
@@ -323,7 +323,7 @@
        (tick/format-date -1384319842423520030 15)))
 
 (deftest parse-date-test
-  (is (t/spec-check tick/parse-date))
+  (t/is-spec-check tick/parse-date))
   (t/is= -1384319842423520030
        (tick/parse-date "2031-08-28T13:30:07.671.748:258"))
   (t/is= -1384319842423575200                                 ;approx is off by 55170 ticks
@@ -334,7 +334,7 @@
        (tick/parse-date "2031-08-28T13:30:07.671748225524476")))
 
 (deftest add-months-to-date-test
-  (is (t/spec-check tick/add-months-to-date))
+  (t/is-spec-check tick/add-months-to-date))
   (t/is= #::tick{:year         2024
                :month        7
                :day-of-month 1}
@@ -349,28 +349,28 @@
          #{})))
 
 (deftest day-of-week-test
-  (is (t/spec-check tick/day-of-week))
+  (t/is-spec-check tick/day-of-week))
   (t/is= :wednesday
        (tick/day-of-week tick/date-2020))
   (t/is= :friday
        (tick/day-of-week (tick/add-months-to-date tick/date-2020 4))))
 
 (deftest start-of-year-test
-  (is (t/spec-check tick/start-of-year))
+  (t/is-spec-check tick/start-of-year))
   (t/is= tick/date-2020
        (tick/start-of-year tick/date-2020))
   (t/is= tick/date-2020
        (tick/start-of-year (tick/add-months-to-date tick/date-2020 4))))
 
 (deftest end-of-year-test
-  (is (t/spec-check tick/end-of-year))
+  (t/is-spec-check tick/end-of-year))
   (t/is= (tick/add-months-to-date tick/date-2020 12)
        (tick/end-of-year tick/date-2020))
   (t/is= (tick/add-months-to-date tick/date-2020 12)
        (tick/end-of-year (tick/add-months-to-date tick/date-2020 4))))
 
 (deftest start-of-month-test
-  (is (t/spec-check tick/start-of-month))
+  (t/is-spec-check tick/start-of-month))
   (t/is= tick/date-2020
        (tick/start-of-month tick/date-2020))
   (t/is= (tick/add-months-to-date tick/date-2020 4)
@@ -378,7 +378,7 @@
          (+ (tick/add-months-to-date tick/date-2020 4) 2342478))))
 
 (deftest end-of-month-test
-  (is (t/spec-check tick/end-of-month))
+  (t/is-spec-check tick/end-of-month))
   (t/is= (tick/add-months-to-date tick/date-2020 1)
        (tick/end-of-month tick/date-2020))
   (t/is= (tick/add-months-to-date tick/date-2020 5)
@@ -386,21 +386,21 @@
          (+ (tick/add-months-to-date tick/date-2020 4) 2342478))))
 
 (deftest start-of-day-test
-  (is (t/spec-check tick/start-of-day))
+  (t/is-spec-check tick/start-of-day))
   (t/is= tick/date-2020
        (tick/start-of-day tick/date-2020))
   (t/is= tick/date-2020
        (tick/start-of-day (+ tick/date-2020 2342478))))
 
 (deftest end-of-day-test
-  (is (t/spec-check tick/end-of-day))
+  (t/is-spec-check tick/end-of-day))
   (t/is= (+ tick/date-2020 tick/ticks-per-day)
        (tick/end-of-day tick/date-2020))
   (t/is= (+ tick/date-2020 tick/ticks-per-day)
        (tick/end-of-day (+ tick/date-2020 2342478))))
 
 (deftest ticks-in-month-test
-  (is (t/spec-check tick/ticks-in-month))
+  (t/is-spec-check tick/ticks-in-month))
   (t/is= 3064089600000000
        (tick/ticks-in-month tick/date-2020))
   (t/is= 2965248000000000
@@ -409,7 +409,7 @@
 
 ;;;DATE INTERVALS
 (deftest months-difference-test
-  (is (t/spec-check tick/months-difference))
+  (t/is-spec-check tick/months-difference))
   (t/is= 77
        (tick/months-difference [73847 234242232323552353]))
   (t/is= 1
@@ -418,35 +418,35 @@
        (tick/months-difference [2342423 -2473847])))
 
 (deftest date-range->duration-test
-  (is (t/spec-check tick/date-range->duration))
+  (t/is-spec-check tick/date-range->duration))
   (t/is= [77 2656363523478506]
        (tick/date-range->duration [73847 234242232323552353]))
   (t/is= [1 -3064089595183730]
        (tick/date-range->duration [-2473847 2342423])))
 
 (deftest date-range->months-floor-test
-  (is (t/spec-check tick/date-range->months-floor))
+  (t/is-spec-check tick/date-range->months-floor))
   (t/is= [77 2656363523478506]
        (tick/date-range->months-floor [73847 234242232323552353]))
   (t/is= [0 4816270]
        (tick/date-range->months-floor [-2473847 2342423])))
 
 (deftest date-range->months-ceil-test
-  (is (t/spec-check tick/date-range->months-ceil))
+  (t/is-spec-check tick/date-range->months-ceil))
   (t/is= [78 -308884476521494]
        (tick/date-range->months-ceil [73847 234242232323552353]))
   (t/is= [1 -3064089595183730]
        (tick/date-range->months-ceil [-2473847 2342423])))
 
 (deftest date-range->prorated-months-test
-  (is (t/spec-check tick/date-range->prorated-months))
+  (t/is-spec-check tick/date-range->prorated-months))
   (t/is= 76.89583182367238
     (tick/date-range->prorated-months [73847 234242232323552353]))
   (t/is= 1.5718437215413022E-9
     (tick/date-range->prorated-months [-2473847 2342423])))
 
 (deftest format-duration-test
-  (is (t/spec-check tick/format-duration))
+  (t/is-spec-check tick/format-duration))
   (t/is= "3mo20w01h18m17.923283s"
     (tick/format-duration {::tick/duration [3 13843198424235230]
                            ::tick/show-average-years? false}))
@@ -473,7 +473,7 @@
     (tick/format-duration {::tick/duration [0 333333333333333333]})))
 
 (deftest parse-duration-test
-  (is (t/spec-check tick/parse-duration))
+  (t/is-spec-check tick/parse-duration))
   ;; Test round-trip with format-duration
   (t/is= [3 13843198424235752]
     (tick/parse-duration "3mo20w01h18m17.923283s"))
@@ -512,14 +512,14 @@
 
 ;;;AVERAGE YEARS
 (deftest ticks->average-years-test
-  (is (t/spec-check tick/ticks->average-years))
+  (t/is-spec-check tick/ticks->average-years))
   (t/is= 8.16660631615668E-6
        (tick/ticks->average-years 294823904829))
   (t/is= -6.852542892382862E-11
        (tick/ticks->average-years -2473847)))
 
 (deftest date-range->average-years-test
-  (is (t/spec-check tick/date-range->average-years))
+  (t/is-spec-check tick/date-range->average-years))
   (t/is= 3.3368513762008396E-4
        (tick/date-range->average-years [294823904829 12341242141242]))
   (t/is= 6.917427246472333E-11
@@ -527,21 +527,21 @@
 
 ;;;PREDICATES
 (deftest weekend?-test
-  (is (t/spec-check tick/weekend?))
+  (t/is-spec-check tick/weekend?))
   (t/is-not (tick/weekend? tick/date-2020))
   (is (tick/weekend? (tick/breakdown->date {::tick/year         2020
                                             ::tick/month        1
                                             ::tick/day-of-month 4}))))
 
 (deftest weekday?-test
-  (is (t/spec-check tick/weekday?))
+  (t/is-spec-check tick/weekday?))
   (is (tick/weekday? tick/date-2020))
   (t/is-not (tick/weekday? (tick/breakdown->date {::tick/year         2020
                                                 ::tick/month        1
                                                 ::tick/day-of-month 4}))))
 
 (deftest first-day-of-month?-test
-  (is (t/spec-check tick/first-day-of-month?))
+  (t/is-spec-check tick/first-day-of-month?))
   (is (tick/first-day-of-month? tick/date-2020))
   (t/is-not (tick/first-day-of-month?
             (tick/breakdown->date {::tick/year         2020
@@ -549,7 +549,7 @@
                                    ::tick/day-of-month 3}))))
 
 (deftest last-day-of-month?-test
-  (is (t/spec-check tick/last-day-of-month?))
+  (t/is-spec-check tick/last-day-of-month?))
   (t/is-not (tick/last-day-of-month? tick/date-2020))
   (is (tick/last-day-of-month?
         (tick/breakdown->date {::tick/year         2020
@@ -557,7 +557,7 @@
                                ::tick/day-of-month 31}))))
 
 (deftest same-day?-test
-  (is (t/spec-check tick/same-day?))
+  (t/is-spec-check tick/same-day?))
   (t/is-not (tick/same-day? [tick/date-2020 tick/date-2070]))
   (is (tick/same-day? [tick/date-2020 tick/date-2020]))
   (t/is-not (tick/same-day? [tick/date-2070 tick/date-2020])))
