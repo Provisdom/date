@@ -16,9 +16,9 @@
 ;;;LEAP YEARS
 (ct/deftest leap-year?-test
   (t/is-spec-check instant/leap-year?))
-  (is (instant/leap-year? 2000))
+  (t/is (instant/leap-year? 2000))
   (t/is-not (instant/leap-year? 2001))
-  (is (instant/leap-year? 2004)))
+  (t/is (instant/leap-year? 2004)))
 
 (ct/deftest days-in-month-test
   (t/is-spec-check instant/days-in-month))
@@ -31,7 +31,7 @@
   (t/is-spec-check instant/days-until-month))
   (t/is= 59 (instant/days-until-month [2014 3]))
   (t/is= 31 (instant/days-until-month [2014 2]))
-  (is (zero? (instant/days-until-month [2014 1])))
+  (t/is (zero? (instant/days-until-month [2014 1])))
   (t/is= 31 (instant/days-until-month [2004 2])))
 
 (ct/deftest passed-leap-days-test
@@ -43,14 +43,14 @@
   (t/is= -13 (instant/passed-leap-days [2070 1] [2016 3]))
   (t/is= -14 (instant/passed-leap-days [2070 1] [2014 2]))
   (t/is= 2 (instant/passed-leap-days [2014 2] [2020 9]))
-  (is (zero? (instant/passed-leap-days [2014 2] [2014 5])))
+  (t/is (zero? (instant/passed-leap-days [2014 2] [2014 5])))
   (t/is= 1 (instant/passed-leap-days [2000 1] [2000 3]))
   (t/is= 1 (instant/passed-leap-days [2000 1] [2004 1]))
   (t/is= 2 (instant/passed-leap-days [2000 1] [2004 3]))
   (t/is= 2 (instant/passed-leap-days [2000 1] [2005 1]))
   (t/is= 25 (instant/passed-leap-days [2000 1] [2100 1]))
   (t/is= 25 (instant/passed-leap-days [2000 1] [2100 3]))
-  (is (zero? (instant/passed-leap-days [2000 1] [1996 3])))
+  (t/is (zero? (instant/passed-leap-days [2000 1] [1996 3])))
   (t/is= -1 (instant/passed-leap-days [2000 1] [1996 1]))
   (t/is= -24 (instant/passed-leap-days [2000 1] [1900 3]))
   (t/is= -24 (instant/passed-leap-days [2000 1] [1900 1])))

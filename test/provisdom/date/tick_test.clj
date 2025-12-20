@@ -304,7 +304,7 @@
 
 (ct/deftest date-breakdown?-test
   (t/is-spec-check tick/date-breakdown?))
-  (is (tick/date-breakdown?
+  (t/is (tick/date-breakdown?
         #::tick{:us    0, :month 3, :seconds 0, :day-of-month 1, :year 2024,
                 :hours 0, :ticks 0, :minutes 0, :ms 0}))
   (t/is-not (tick/date-breakdown?
@@ -529,20 +529,20 @@
 (ct/deftest weekend?-test
   (t/is-spec-check tick/weekend?))
   (t/is-not (tick/weekend? tick/date-2020))
-  (is (tick/weekend? (tick/breakdown->date {::tick/year         2020
+  (t/is (tick/weekend? (tick/breakdown->date {::tick/year         2020
                                             ::tick/month        1
                                             ::tick/day-of-month 4}))))
 
 (ct/deftest weekday?-test
   (t/is-spec-check tick/weekday?))
-  (is (tick/weekday? tick/date-2020))
+  (t/is (tick/weekday? tick/date-2020))
   (t/is-not (tick/weekday? (tick/breakdown->date {::tick/year         2020
                                                 ::tick/month        1
                                                 ::tick/day-of-month 4}))))
 
 (ct/deftest first-day-of-month?-test
   (t/is-spec-check tick/first-day-of-month?))
-  (is (tick/first-day-of-month? tick/date-2020))
+  (t/is (tick/first-day-of-month? tick/date-2020))
   (t/is-not (tick/first-day-of-month?
             (tick/breakdown->date {::tick/year         2020
                                    ::tick/month        12
@@ -551,7 +551,7 @@
 (ct/deftest last-day-of-month?-test
   (t/is-spec-check tick/last-day-of-month?))
   (t/is-not (tick/last-day-of-month? tick/date-2020))
-  (is (tick/last-day-of-month?
+  (t/is (tick/last-day-of-month?
         (tick/breakdown->date {::tick/year         2020
                                ::tick/month        12
                                ::tick/day-of-month 31}))))
@@ -559,5 +559,5 @@
 (ct/deftest same-day?-test
   (t/is-spec-check tick/same-day?))
   (t/is-not (tick/same-day? [tick/date-2020 tick/date-2070]))
-  (is (tick/same-day? [tick/date-2020 tick/date-2020]))
+  (t/is (tick/same-day? [tick/date-2020 tick/date-2020]))
   (t/is-not (tick/same-day? [tick/date-2070 tick/date-2020])))
