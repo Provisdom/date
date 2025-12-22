@@ -183,7 +183,7 @@
 (s/def ::duration (s/tuple ::months ::ticks))
 (s/def ::date-range (s/tuple ::date ::date))
 (s/def ::date-interval ::intervals/long-interval)
-(s/def ::strict-date-interval (intervals/strict-interval-spec ::m/date))
+(s/def ::strict-date-interval (intervals/strict-interval-spec ::date))
 ;;formatting fractions of a second or average year
 (s/def ::fraction-precision (s/int-in 0 16))
 (s/def ::show-average-years? boolean?)
@@ -877,8 +877,8 @@
   (let [s (str/split date-string #"-|T")
         [s1 s2 s3 s4] s
         anomaly {::anomalies/category ::anomalies/exception
-                 ::anomalies/message  "bad ticks-string"
-                 ::anomalies/fn       (var parse-ticks)}
+                 ::anomalies/message  "bad date-string"
+                 ::anomalies/fn       (var parse-date)}
         year (read-number s1 anomaly 2170)
         month (read-number s2 anomaly 1)
         day-of-month (read-number s3 anomaly 0)
@@ -1075,6 +1075,66 @@
   :args (s/cat :date ::date)
   :ret (s/or :date ::date
          :anomaly ::anomalies/anomaly))
+
+(defn start-of-week
+  "Returns the first moment (midnight) of the week containing `date`.
+
+  Weeks start on Sunday."
+  [date]
+  (let [dow-index (.indexOf days-of-week (day-of-week date))
+        days-to-subtract (* dow-index ticks-per-day)]
+    (start-of-day (- date days-to-subtract))))
+
+(s/fdef start-of-week
+  :args (s/cat :date ::date)
+  :ret ::date)
+
+(defn end-of-week
+  "Returns the first moment (midnight) of the next week after `date`.
+
+  Weeks start on Sunday."
+  [date]
+  (let [dow-index (.indexOf days-of-week (day-of-week date))
+        days-to-add (* (- 7 dow-index) ticks-per-day)]
+    (start-of-day (+ date days-to-add))))
+
+(s/fdef end-of-week
+  :args (s/cat :date ::date)
+  :ret ::date)
+
+(defn start-of-quarter
+  "Returns the first moment of the quarter containing `date`.
+
+  Quarters: Q1 (Jan-Mar), Q2 (Apr-Jun), Q3 (Jul-Sep), Q4 (Oct-Dec)."
+  [date]
+  (let [{::keys [year month]} (date->breakdown date #{})
+        quarter-start-month (inc (* 3 (quot (dec month) 3)))]
+    (breakdown->date {::year         year
+                      ::month        quarter-start-month
+                      ::day-of-month 1})))
+
+(s/fdef start-of-quarter
+  :args (s/cat :date ::date)
+  :ret ::date)
+
+(defn end-of-quarter
+  "Returns the first moment of the next quarter after `date`.
+
+  Quarters: Q1 (Jan-Mar), Q2 (Apr-Jun), Q3 (Jul-Sep), Q4 (Oct-Dec)."
+  [date]
+  (let [{::keys [year month]} (date->breakdown date #{})
+        quarter-index (quot (dec month) 3)
+        next-quarter-month (+ 4 (* 3 quarter-index))
+        [year month] (if (> next-quarter-month 12)
+                       [(inc year) 1]
+                       [year next-quarter-month])]
+    (breakdown->date {::year         year
+                      ::month        month
+                      ::day-of-month 1})))
+
+(s/fdef end-of-quarter
+  :args (s/cat :date ::date)
+  :ret ::date)
 
 (defn ticks-in-month
   "Returns the number of ticks in the month containing `date`.
@@ -1324,6 +1384,28 @@
 (s/fdef ticks->average-years
   :args (s/cat :ticks ::ticks)
   :ret ::instant/average-years)
+
+(def ^:const max-average-years
+  "Maximum average years that can be converted to ticks without overflow."
+  (/ m/max-long (double ticks-per-average-year)))
+
+(def ^:const min-average-years
+  "Minimum average years that can be converted to ticks without overflow."
+  (/ m/min-long (double ticks-per-average-year)))
+
+(defn average-years->ticks
+  "Converts `average-years` to ticks.
+
+  Uses the average year length of 365.2425 days.
+  Input must be in range [min-average-years, max-average-years] (approximately ±255 years)
+  to avoid long overflow."
+  [average-years]
+  (long (* average-years ticks-per-average-year)))
+
+(s/fdef average-years->ticks
+  :args (s/cat :average-years (s/and ::instant/average-years
+                                     #(<= min-average-years % max-average-years)))
+  :ret ::ticks)
 
 (defn date-range->average-years
   "Converts `date-range` to average years."

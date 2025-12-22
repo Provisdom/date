@@ -93,12 +93,14 @@
    :sunday    "Sun"})
 
 (def ^:const months->name
-  "Month names indexed by month number (0-based)."
+  "Month names indexed by month number (0-based).
+  Use `(nth months->name (dec month))` for 1-based month numbers."
   ["January", "February", "March", "April", "May", "June", "July", "August",
    "September", "October", "November", "December"])
 
 (def ^:const months->abbreviation
-  "Month abbreviations indexed by month number (0-based)."
+  "Month abbreviations indexed by month number (0-based).
+  Use `(nth months->abbreviation (dec month))` for 1-based month numbers."
   ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct",
    "Nov", "Dec"])
 

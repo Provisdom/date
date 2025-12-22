@@ -2,8 +2,9 @@
   "High-performance collections optimized for date operations using integer maps.
 
   Provides date-map and date-set collections that leverage clojure.data.int-map
-  for significantly faster operations on dense date collections. Use dense-date-set
-  when elements are clustered within +/- 1000 ticks of each other."
+  for significantly faster operations on date collections compared to standard
+  Clojure maps and sets. Use dense-date-set when dates are densely packed
+  (e.g., consecutive days or intraday timestamps)."
   (:require
     [clojure.data.int-map :as int-map]
     [clojure.spec.alpha :as s]
@@ -20,13 +21,13 @@
   
   Example:
     (s/def ::price-map (date-map-of pos?))"
-  [vpred & opts]
-  (let [sform `(s/map-of ::tick/date ~vpred ~@opts)
-        xform `(s/and ~sform date-map?)]
+  [v-pred & opts]
+  (let [s-form `(s/map-of ::tick/date ~v-pred ~@opts)
+        xform `(s/and ~s-form date-map?)]
     `(s/with-gen
        ~xform
        #(gen/fmap (partial into (int-map/int-map))
-                  (s/gen ~sform)))))
+                  (s/gen ~s-form)))))
 
 (s/def ::date-set
   (s/coll-of ::tick/date
@@ -102,20 +103,20 @@
 
 (defn date-set
   "Creates a date-set for sparse date collections.
-  
-  Use dense-date-set when dates are clustered within +/- 1000 ticks.
-  
+
+  Use dense-date-set when dates are densely packed (e.g., consecutive days).
+
   Example:
     (date-set [date1 date2 date3])"
   ([] (int-map/int-set))
   ([dates] (int-map/int-set dates)))
 
 (defn dense-date-set
-  "Creates a dense date-set optimized for clustered dates.
-  
-  Use when dates are densely clustered (within +/- 1000 ticks).
-  More memory efficient than regular date-set for dense collections.
-  
+  "Creates a dense date-set optimized for densely packed dates.
+
+  More memory efficient than regular date-set when dates are close together
+  (e.g., consecutive days, intraday timestamps, or time series data).
+
   Example:
     (dense-date-set consecutive-trading-days)"
   ([] (int-map/dense-int-set))

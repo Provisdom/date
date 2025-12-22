@@ -21,13 +21,30 @@ The library consists of three main namespaces:
 
 ## Installation
 
-Add the following to your project dependencies:
-
-Or with deps.edn:
+Add to your deps.edn:
 
 ```clojure
 {:deps {provisdom/date {:git/url "https://github.com/Provisdom/date.git" :sha "..."}}}
 ```
+
+## Choosing a Namespace
+
+The library provides two main approaches for working with dates:
+
+### `provisdom.date.tick` (Recommended for most use cases)
+High-precision date handling using "ticks" (1/1144 of a microsecond) as the base unit. Use this when you need:
+- Sub-millisecond precision
+- Accurate date arithmetic that avoids floating-point errors
+- Financial or scientific calculations where precision matters
+
+### `provisdom.date.instant`
+Basic utilities for working with Java's `Date` and millisecond timestamps. Use this when:
+- You only need millisecond precision
+- You're doing simple Java Date interop
+- You need constants like `ms-per-day` or `average-days-per-year`
+
+### `provisdom.date.collections`
+Specialized high-performance collections for dates. Use when storing many dates in maps or sets.
 
 ## Usage
 
@@ -119,7 +136,7 @@ Or with deps.edn:
 This library uses "ticks" (1/1144 of a microsecond) as the base unit for time. This precise unit was carefully chosen to ensure accuracy in date/time calculations:
 
 - 400 years = 146,097 days
-- Divisible by 2^12 and all numbers through 16
+- Divisible by 2^12 and all integers 1-16
 - Avoids precision loss in most time period partitioning operations
 
 ### 2070 as Epoch
