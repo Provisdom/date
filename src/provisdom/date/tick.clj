@@ -305,7 +305,7 @@
   
   Note: 1.144 ticks = 1 nanosecond."
   [ticks]
-  (Duration/ofNanos (m/round (* 1000 (/ ticks ticks-per-us)) :up)))
+  (Duration/ofNanos (m/round' (* 1000 (/ ticks ticks-per-us)) :up)))
 
 (s/fdef ticks->java-duration
   :args (s/cat :ticks ::ticks)
@@ -320,7 +320,7 @@
   (let [nanos (.getNano ^Duration java-duration)
         seconds (.getSeconds ^Duration java-duration)
         ticks (+' (*' seconds ticks-per-second) (* (/ nanos 1000) ticks-per-us))]
-    (m/round (intervals/bound-by-interval [m/min-long m/max-long] ticks) :up)))
+    (m/round' (intervals/bound-by-interval [m/min-long m/max-long] ticks) :up)))
 
 (s/fdef java-duration->ticks-by-bounding
   :args (s/cat :java-duration ::java-duration)
@@ -329,10 +329,10 @@
 ;;;INSTANT-MS
 (defn date->instant-ms
   "Converts tick `date` to milliseconds since Unix epoch.
-  
+
   Precision is limited to milliseconds."
   [date]
-  (m/round (- (/ date ticks-per-ms) (/ date-1970 ticks-per-ms)) :up))
+  (m/round' (- (/ date ticks-per-ms) (/ date-1970 ticks-per-ms)) :up))
 
 (s/fdef date->instant-ms
   :args (s/cat :date ::date)
@@ -431,7 +431,7 @@
                                 (* seconds ticks-per-second)
                                 ticks-per-second)
                               [0 0])
-            ticks (m/round ticks :up)
+            ticks (m/round' ticks :up)
             r [hours minutes seconds ticks]
             not-all-longs? (some false? (map m/long? r))]
         (if not-all-longs?
