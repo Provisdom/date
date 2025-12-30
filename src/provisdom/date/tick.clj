@@ -19,7 +19,8 @@
 
   Average Years Approach:
   - Use for: financial calculations, approximate durations, statistical analysis
-  - Benefits: better performance (pre-calculations possible), equal time steps enable model optimization
+  - Benefits: better performance (pre-calculations possible), equal time steps enable model
+      optimization
   - Trade-offs: may land on approximate dates (off by hours/days)
 
   Two Types of Date Representations:
@@ -33,20 +34,34 @@
      - Based on average Gregorian year of 365.2425 days (ticks-per-average-year)
      - Used for approximate durations, financial calculations, and time estimates
      - Format: <number>ay (e.g., '0.383527ay' for average years)
-     - Converted using ticks->average-years, date-range->average-years, and parsing/formatting functions
+     - Converted using ticks->average-years, date-range->average-years, and parsing/formatting
+         functions
+
+  Key Features:
+  - Date arithmetic: add/subtract ticks, months, business days
+  - Calendar boundaries: start/end of day, week, month, quarter, year, fiscal year
+  - Date sequences: lazy sequences with configurable step (day, week, month, year)
+  - Range operations: overlap detection, intersection, containment
+  - Named periods: :ytd, :mtd, :qtd, :last-month, :trailing-12-months, etc.
+  - Business days: add-business-days, business-days-between with holiday support
+  - ISO week dates: iso-week-number, iso-week-year, format-iso-week-date
+  - Relative formatting: format-relative for human-readable durations
 
   Common Patterns:
-  
+
   Date Arithmetic:
     - Create new dates with simple arithmetic:
         (+ date-2020 (* 5 ticks-per-day))           ; 5 days after 2020-01-01
         (+ date-2020 (* 6 ticks-per-hour))          ; 6 hours after 2020-01-01
         (- date-2020 ticks-per-week)                ; 1 week before 2020-01-01
         (+ date-2020 (* 2 ticks-per-day) (* 3 ticks-per-hour))  ; 2 days + 3 hours after
-    
+
     - Calculate time differences:
-        (/ (- date (start-of-month date)) ticks-per-minute)      ; minutes from month start
-        (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)  ; minutes until month end
+        ;; minutes from month start
+        (/ (- date (start-of-month date)) ticks-per-minute)
+
+        ;; minutes until month end
+        (/ (- (add-months-to-date (start-of-month date) 1) date) ticks-per-minute)
 
   System Conversions:
     - Calendar dates to/from components:
@@ -54,7 +69,7 @@
         ; => {::year 2020 ::month 1 ::day-of-month 1}
         (breakdown->date {::year 2020 ::month 6 ::day-of-month 15})
         ; => -18252672000000000  ; tick value for June 15, 2020
-    
+
     - Average years conversions:
         (ticks->average-years (* 365 ticks-per-day))  ; => 0.9993  ; ~1 year
         (* 1.5 ticks-per-average-year)                ; => 54151729632000000  ; 1.5 years
@@ -299,6 +314,12 @@
 
 (s/def ::day-of-week (set days-of-week))
 
+(s/def ::holiday-set (s/coll-of ::date :kind set?))
+
+(s/def ::step-unit #{:day :week :month :year})
+(s/def ::step-amount ::m/long+)
+(s/def ::end-date ::date)
+
 ;;;JAVA DURATION
 (defn ticks->java-duration
   "Converts `ticks` to Java Duration, rounded to nearest nanosecond.
@@ -427,9 +448,7 @@
                                              (read-string (str sub))))
                                       (str/split time-string #":"))
             [seconds ticks] (if (m/num? seconds)
-                              (m/quot-and-mod'
-                                (* seconds ticks-per-second)
-                                ticks-per-second)
+                              (m/quot-and-mod' (* seconds ticks-per-second) ticks-per-second)
                               [0 0])
             ticks (m/round' ticks :up)
             r [hours minutes seconds ticks]
@@ -591,8 +610,7 @@
           minutes-part (when (or show-zeros? (not (zero? minutes)))
                          (str (f2 minutes) "m"))
           seconds-part (when (or show-zeros? (not (zero? total-seconds)))
-                         (str (format (str "%0" (+ 3 fraction-precision)
-                                        "." fraction-precision "f")
+                         (str (format (str "%0" (+ 3 fraction-precision) "." fraction-precision "f")
                                 total-seconds) "s"))]
       (str weeks-part days-part hours-part minutes-part seconds-part))))
 
@@ -664,9 +682,7 @@
             fractional-ticks (if (number? seconds-fractional)
                                (long (* seconds-fractional ticks-per-second))
                                0)
-            not-all-longs? (some false?
-                             (map m/long?
-                               [weeks days hours minutes seconds-whole]))]
+            not-all-longs? (some false? (map m/long? [weeks days hours minutes seconds-whole]))]
         (if (or not-all-longs? (and seconds-match (not (number? seconds-decimal))))
           anomaly
           (breakdown->ticks
@@ -757,17 +773,12 @@
                                  year year]
                             (if (m/non+? day)
                               (let [new-mo (if (m/one? month) 12 (dec month))]
-                                (recur (+ day (instant/days-in-month
-                                                [year
-                                                 new-mo]))
+                                (recur (+ day (instant/days-in-month [year new-mo]))
                                   new-mo
                                   (if (m/one? month) (dec year) year)))
                               [day month year]))
-         ticks-bd (ticks->breakdown
-                    ticks
-                    (set/difference
-                      date-form
-                      #{::year ::month ::day-of-month ::weeks ::days}))]
+         ticks-bd (ticks->breakdown ticks
+                    (set/difference date-form #{::year ::month ::day-of-month ::weeks ::days}))]
      (merge {::year         year
              ::month        month
              ::day-of-month day}
@@ -842,22 +853,19 @@
    (let [f2 (partial format "%02d")
          f3 (partial format "%03d")
          {::keys [year month day-of-month hours minutes seconds ms us ticks]
-          :or    {hours 0, minutes 0, seconds 0, ms 0, us 0,
-                  ticks 0}} (date->breakdown date)]
-     (str (f2 year) "-" (f2 month) "-" (f2 day-of-month) "T" (f2 hours) ":"
-       (f2 minutes) ":" (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
+          :or    {hours 0, minutes 0, seconds 0, ms 0, us 0, ticks 0}} (date->breakdown date)]
+     (str (f2 year) "-" (f2 month) "-" (f2 day-of-month) "T" (f2 hours) ":" (f2 minutes) ":"
+       (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
   ([date seconds-fraction-precision]
    (let [f2 (partial format "%02d")
          {::keys [year month day-of-month hours minutes seconds ms us ticks]
           :or    {hours 0, minutes 0, seconds 0, ms 0, us 0, ticks 0}
           :as    breakdown} (date->breakdown date)
-         ticks (breakdown->ticks
-                 (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
+         ticks (breakdown->ticks (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
          seconds-fraction (double (/ ticks ticks-per-second))]
-     (str (f2 year) "-" (f2 month) "-" (f2 day-of-month) "T" (f2 hours) ":"
-       (f2 minutes) ":" (format (str "%0" (+ 3 seconds-fraction-precision)
-                                  "." seconds-fraction-precision "f")
-                          (+ seconds seconds-fraction))))))
+     (str (f2 year) "-" (f2 month) "-" (f2 day-of-month) "T" (f2 hours) ":" (f2 minutes) ":"
+       (format (str "%0" (+ 3 seconds-fraction-precision) "." seconds-fraction-precision "f")
+         (+ seconds seconds-fraction))))))
 
 (s/fdef format-date
   :args (s/cat :date ::date
@@ -989,8 +997,7 @@
   Example:
     (start-of-month some-date-in-march) ; => 2020-03-01T00:00:00"
   [date]
-  (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks)
-                         ::day-of-month 1)]
+  (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks) ::day-of-month 1)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
       {::anomalies/fn       (var start-of-month)
@@ -1054,8 +1061,7 @@
   [date]
   (let [{::keys [year month day-of-month]
          :as    date-breakdown} (date->breakdown date #{})
-        [month day-of-month] (if (= day-of-month
-                                   (instant/days-in-month [year month]))
+        [month day-of-month] (if (= day-of-month (instant/days-in-month [year month]))
                                [(inc month) 1]
                                [month (inc day-of-month)])
         [year month] (if (= month 13)
@@ -1159,10 +1165,8 @@
          end-month ::month
          end-days  ::day-of-month
          end-ticks ::ticks} (date->breakdown end-date #{})
-        months (+ (* 12 (- end-year start-year))
-                 (- end-month start-month))
-        ticks (+ (* ticks-per-day (- end-days start-days))
-                (- (or end-ticks 0) (or start-ticks 0)))]
+        months (+ (* 12 (- end-year start-year)) (- end-month start-month))
+        ticks (+ (* ticks-per-day (- end-days start-days)) (- (or end-ticks 0) (or start-ticks 0)))]
     [months ticks]))
 
 (defn months-difference
@@ -1240,8 +1244,7 @@
   [[start-date end-date]]
   (let [end-of-start-month (end-of-month start-date)
         start-of-end-month (start-of-month end-date)
-        whole-months (dec (first (date-range->duration
-                                   [end-of-start-month start-of-end-month])))
+        whole-months (dec (first (date-range->duration [end-of-start-month start-of-end-month])))
         end-month-ticks (double (ticks-in-month end-date))]
     (max 0.0
       (if (neg? whole-months)
@@ -1266,13 +1269,11 @@
 
   Takes a map with:
   - ::duration (required): The [months ticks] duration tuple to format
-  - ::fraction-precision (optional): Shows fractional parts with specified
-         precision. Default is 6.
+  - ::fraction-precision (optional): Shows fractional parts with specified precision. Default is 6.
   - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes,
          and seconds. Default is false (hide zeros).
-  - ::show-average-years? (optional): When true, shows ticks as
-         average years (ay) instead of detailed time components.
-         Default is true.
+  - ::show-average-years? (optional): When true, shows ticks as average years (ay) instead of
+         detailed time components. Default is true.
 
   Example:
     (format-duration {::duration [3 123456789]})
@@ -1307,8 +1308,7 @@
                        {::show-average-years? show-average-years?
                         ::show-zeros?         show-zeros?
                         ::ticks               ticks}
-                       fraction-precision (assoc ::fraction-precision
-                                            fraction-precision)))]
+                       fraction-precision (assoc ::fraction-precision fraction-precision)))]
     (str years-part months-part ticks-part)))
 
 (s/fdef format-duration
@@ -1361,8 +1361,7 @@
         ticks (if (str/blank? ticks-string)
                 0
                 (parse-ticks ticks-string))
-        not-all-valid? (or (some false?
-                             (map m/long? [years months-only total-months]))
+        not-all-valid? (or (some false? (map m/long? [years months-only total-months]))
                          (anomalies/anomaly? ticks))]
     (if not-all-valid?
       anomaly
@@ -1404,7 +1403,7 @@
 
 (s/fdef average-years->ticks
   :args (s/cat :average-years (s/and ::instant/average-years
-                                     #(<= min-average-years % max-average-years)))
+                                #(<= min-average-years % max-average-years)))
   :ret ::ticks)
 
 (defn date-range->average-years
@@ -1466,3 +1465,486 @@
 (s/fdef same-day?
   :args (s/cat :date-range ::date-range)
   :ret boolean?)
+
+;;;HOLIDAY CALENDAR & BUSINESS DAYS
+(defn business-day?
+  "Returns true if `date` is a business day (weekday and not a holiday).
+
+  Optional `holiday-set` is a set of dates to treat as holidays."
+  ([date] (weekday? date))
+  ([date holiday-set]
+   (and (weekday? date)
+     (not (contains? holiday-set (start-of-day date))))))
+
+(s/fdef business-day?
+  :args (s/cat :date ::date
+          :holiday-set (s/? ::holiday-set))
+  :ret boolean?)
+
+(defn add-business-days
+  "Adds `n` business days to `date`.
+
+  Skips weekends and optionally holidays. Negative `n` subtracts days.
+
+  Example:
+    (add-business-days date-2020 5)        ; 5 business days later
+    (add-business-days date-2020 -3 #{})   ; 3 business days earlier"
+  ([date n] (add-business-days date n #{}))
+  ([date n holiday-set]
+   (if (zero? n)
+     date
+     (let [direction (if (pos? n) 1 -1)
+           step (* direction ticks-per-day)]
+       (loop [current date
+              remaining (m/abs n)]
+         (if (zero? remaining)
+           current
+           (let [next-date (+ current step)]
+             (if (business-day? next-date holiday-set)
+               (recur next-date (dec remaining))
+               (recur next-date remaining)))))))))
+
+(s/fdef add-business-days
+  :args (s/cat :date ::date
+          :n ::m/long
+          :holiday-set (s/? ::holiday-set))
+  :ret ::date)
+
+(defn business-days-between
+  "Returns the count of business days in `date-range` (exclusive of end).
+
+  Excludes weekends and optionally holidays.
+
+  Example:
+    (business-days-between [start-date end-date])
+    (business-days-between [start-date end-date] holiday-set)"
+  ([[start-date end-date]] (business-days-between [start-date end-date] #{}))
+  ([[start-date end-date] holiday-set]
+   (let [start (start-of-day start-date)
+         end (start-of-day end-date)
+         [start end sign] (if (<= start end)
+                            [start end 1]
+                            [end start -1])]
+     (* sign
+       (loop [current start
+              count 0]
+         (if (>= current end)
+           count
+           (recur (+ current ticks-per-day)
+             (if (business-day? current holiday-set)
+               (inc count)
+               count))))))))
+
+(s/fdef business-days-between
+  :args (s/cat :date-range ::date-range
+          :holiday-set (s/? ::holiday-set))
+  :ret ::m/long)
+
+;;;FISCAL YEAR
+(s/def ::fiscal-year-start-month ::month)
+
+(defn fiscal-year
+  "Returns the fiscal year number for `date`.
+
+  `fiscal-year-start-month` is the month the fiscal year starts (1-12).
+  Default is 1 (calendar year).
+
+  Example:
+    (fiscal-year date 10)  ; October fiscal year start
+    ; A date in Nov 2020 returns fiscal year 2021"
+  ([date] (fiscal-year date 1))
+  ([date fiscal-year-start-month]
+   (let [{::keys [year month]} (date->breakdown date #{})]
+     (if (>= month fiscal-year-start-month)
+       (if (= fiscal-year-start-month 1)
+         year
+         (inc year))
+       year))))
+
+(s/fdef fiscal-year
+  :args (s/cat :date ::date
+          :fiscal-year-start-month (s/? ::fiscal-year-start-month))
+  :ret ::m/int)
+
+(defn start-of-fiscal-year
+  "Returns the first moment of the fiscal year containing `date`.
+
+  `fiscal-year-start-month` is the month the fiscal year starts (1-12).
+  Default is 1 (calendar year).
+
+  Example:
+    (start-of-fiscal-year some-date 7)  ; July fiscal year"
+  ([date] (start-of-fiscal-year date 1))
+  ([date fiscal-year-start-month]
+   (let [{::keys [year month]} (date->breakdown date #{})
+         fy-year (if (>= month fiscal-year-start-month)
+                   year
+                   (dec year))]
+     (breakdown->date {::year         fy-year
+                       ::month        fiscal-year-start-month
+                       ::day-of-month 1}))))
+
+(s/fdef start-of-fiscal-year
+  :args (s/cat :date ::date
+          :fiscal-year-start-month (s/? ::fiscal-year-start-month))
+  :ret ::date)
+
+(defn end-of-fiscal-year
+  "Returns the first moment of the next fiscal year after `date`.
+
+  `fiscal-year-start-month` is the month the fiscal year starts (1-12).
+  Default is 1 (calendar year).
+
+  Example:
+    (end-of-fiscal-year some-date 7)  ; July fiscal year"
+  ([date] (end-of-fiscal-year date 1))
+  ([date fiscal-year-start-month]
+   (let [{::keys [year month]} (date->breakdown date #{})
+         fy-year (if (>= month fiscal-year-start-month)
+                   (inc year)
+                   year)]
+     (breakdown->date {::year         fy-year
+                       ::month        fiscal-year-start-month
+                       ::day-of-month 1}))))
+
+(s/fdef end-of-fiscal-year
+  :args (s/cat :date ::date
+          :fiscal-year-start-month (s/? ::fiscal-year-start-month))
+  :ret ::date)
+
+;;;DATE SEQUENCES
+(defn date-seq
+  "Returns a lazy sequence of dates starting from `start-date`.
+
+  Options map:
+  - :step-unit - one of :day, :week, :month, :year (default :day)
+  - :step-amount - number of units per step (default 1)
+  - :end-date - optional end date (exclusive)
+
+  The sequence terminates if it reaches invalid dates (outside the
+  supported range 1814-2325).
+
+  Examples:
+    (date-seq date-2020)                              ; daily from 2020
+    (date-seq date-2020 {:step-unit :week})           ; weekly
+    (date-seq date-2020 {:step-unit :month :step-amount 3})  ; quarterly
+    (take 10 (date-seq date-2020 {:end-date date-2021}))     ; bounded"
+  ([start-date] (date-seq start-date {}))
+  ([start-date {:keys [step-unit step-amount end-date]
+                :or   {step-unit :day step-amount 1}}]
+   (let [step-ticks-day (* step-amount ticks-per-day)
+         step-ticks-week (* step-amount ticks-per-week)
+         advance (case step-unit
+                   :day (fn [d]
+                          (let [result (+' d step-ticks-day)]
+                            (if (intervals/in-interval? [m/min-long m/max-long] result)
+                              (long result)
+                              {::anomalies/category ::anomalies/exception
+                               ::anomalies/message  "date overflow"})))
+                   :week (fn [d]
+                           (let [result (+' d step-ticks-week)]
+                             (if (intervals/in-interval? [m/min-long m/max-long] result)
+                               (long result)
+                               {::anomalies/category ::anomalies/exception
+                                ::anomalies/message  "date overflow"})))
+                   :month (fn [d] (add-months-to-date d step-amount))
+                   :year (fn [d] (add-months-to-date d (* step-amount 12))))
+         valid-date? (fn [d] (and (m/long? d)
+                               (not (anomalies/anomaly? d))))]
+     (cond->> (take-while valid-date? (iterate advance start-date))
+       end-date (take-while #(< % end-date))))))
+
+(s/fdef date-seq
+  :args (s/cat :start-date ::date
+          :opts (s/? (s/keys :opt-un [::step-unit ::step-amount ::end-date])))
+  :ret (s/coll-of ::date))
+
+;;;RANGE PREDICATES
+(defn date-in-range?
+  "Returns true if `date` is within `date-range` [start end).
+
+  Uses half-open interval: includes start, excludes end.
+
+  Example:
+    (date-in-range? some-date [start-date end-date])"
+  [date [start-date end-date]]
+  (and (>= date start-date) (< date end-date)))
+
+(s/fdef date-in-range?
+  :args (s/cat :date ::date
+          :date-range ::date-range)
+  :ret boolean?)
+
+(defn ranges-overlap?
+  "Returns true if two date ranges overlap.
+
+  Uses half-open intervals: [start1 end1) and [start2 end2).
+
+  Example:
+    (ranges-overlap? [start1 end1] [start2 end2])"
+  [[start1 end1] [start2 end2]]
+  (and (< start1 end2) (< start2 end1)))
+
+(s/fdef ranges-overlap?
+  :args (s/cat :range1 ::date-range
+          :range2 ::date-range)
+  :ret boolean?)
+
+(defn range-intersection
+  "Returns the intersection of two date ranges, or nil if no overlap.
+
+  Example:
+    (range-intersection [start1 end1] [start2 end2])
+    ; => [max-start min-end] or nil"
+  [[start1 end1] [start2 end2]]
+  (when (ranges-overlap? [start1 end1] [start2 end2])
+    [(max start1 start2) (min end1 end2)]))
+
+(s/fdef range-intersection
+  :args (s/cat :range1 ::date-range
+          :range2 ::date-range)
+  :ret (s/nilable ::date-range))
+
+(defn range-contains?
+  "Returns true if `outer-range` fully contains `inner-range`.
+
+  Example:
+    (range-contains? [outer-start outer-end] [inner-start inner-end])"
+  [[outer-start outer-end] [inner-start inner-end]]
+  (and (<= outer-start inner-start) (>= outer-end inner-end)))
+
+(s/fdef range-contains?
+  :args (s/cat :outer-range ::date-range
+          :inner-range ::date-range)
+  :ret boolean?)
+
+;;;NAMED PERIODS
+(def named-periods
+  "Set of supported named period keywords."
+  #{:ytd :mtd :qtd :wtd :last-7-days :last-30-days :last-90-days
+    :last-week :last-month :last-quarter :last-year
+    :trailing-12-months :trailing-3-months :trailing-6-months})
+
+(s/def ::named-period named-periods)
+
+(defn period->date-range
+  "Converts a named period to a date range [start end) relative to `reference-date`.
+
+  Supported periods:
+  - :ytd - year to date
+  - :mtd - month to date
+  - :qtd - quarter to date
+  - :wtd - week to date
+  - :last-7-days, :last-30-days, :last-90-days
+  - :last-week, :last-month, :last-quarter, :last-year
+  - :trailing-12-months, :trailing-6-months, :trailing-3-months
+
+  Example:
+    (period->date-range :ytd reference-date)
+    (period->date-range :last-quarter reference-date)"
+  [period reference-date]
+  (case period
+    :ytd [(start-of-year reference-date) reference-date]
+    :mtd [(start-of-month reference-date) reference-date]
+    :qtd [(start-of-quarter reference-date) reference-date]
+    :wtd [(start-of-week reference-date) reference-date]
+    :last-7-days [(- reference-date (* 7 ticks-per-day)) reference-date]
+    :last-30-days [(- reference-date (* 30 ticks-per-day)) reference-date]
+    :last-90-days [(- reference-date (* 90 ticks-per-day)) reference-date]
+    :last-week (let [sow (start-of-week reference-date)]
+                 [(- sow ticks-per-week) sow])
+    :last-month (let [som (start-of-month reference-date)]
+                  [(add-months-to-date som -1) som])
+    :last-quarter (let [soq (start-of-quarter reference-date)]
+                    [(add-months-to-date soq -3) soq])
+    :last-year (let [soy (start-of-year reference-date)]
+                 [(add-months-to-date soy -12) soy])
+    :trailing-12-months [(add-months-to-date reference-date -12) reference-date]
+    :trailing-6-months [(add-months-to-date reference-date -6) reference-date]
+    :trailing-3-months [(add-months-to-date reference-date -3) reference-date]))
+
+(s/fdef period->date-range
+  :args (s/cat :period ::named-period
+          :reference-date ::date)
+  :ret ::date-range)
+
+(defn same-period-previous-year
+  "Returns the date range for the same named period in the previous year.
+
+  Useful for year-over-year comparisons.
+
+  Example:
+    (same-period-previous-year :last-month reference-date)"
+  [period reference-date]
+  (let [prev-year-ref (add-months-to-date reference-date -12)]
+    (period->date-range period prev-year-ref)))
+
+(s/fdef same-period-previous-year
+  :args (s/cat :period ::named-period
+          :reference-date ::date)
+  :ret ::date-range)
+
+;;;ISO WEEK DATES & ORDINAL DATES
+(defn ordinal-day
+  "Returns the day of the year (1-366) for `date`.
+
+  January 1 = 1, December 31 = 365 or 366.
+
+  Example:
+    (ordinal-day some-date)  ; => 45 (Feb 14)"
+  [date]
+  (let [{::keys [year month day-of-month]} (date->breakdown date #{})
+        days-before-month (instant/days-until-month [year month])]
+    (+ days-before-month day-of-month)))
+
+(s/fdef ordinal-day
+  :args (s/cat :date ::date)
+  :ret (s/int-in 1 367))
+
+(defn- thursday-of-week
+  "Returns the Thursday of the ISO week containing `date`.
+  In ISO 8601, weeks run Monday(1) through Sunday(7)."
+  [date]
+  (let [dow (day-of-week date)
+        ;; Convert to ISO day number: Monday=1, Tuesday=2, ..., Sunday=7
+        iso-dow (case dow
+                  :monday 1
+                  :tuesday 2
+                  :wednesday 3
+                  :thursday 4
+                  :friday 5
+                  :saturday 6
+                  :sunday 7)
+        ;; Thursday is ISO day 4
+        days-to-thursday (- 4 iso-dow)]
+    (+ date (* days-to-thursday ticks-per-day))))
+
+(defn iso-week-year
+  "Returns the ISO week-numbering year for `date`.
+
+  The ISO week year may differ from the calendar year for dates
+  near year boundaries. Week 1 is the week containing January 4.
+
+  Example:
+    (iso-week-year date)  ; => 2020"
+  [date]
+  (let [thursday (thursday-of-week date)]
+    (::year (date->breakdown thursday #{}))))
+
+(s/fdef iso-week-year
+  :args (s/cat :date ::date)
+  :ret ::m/int)
+
+(defn iso-week-number
+  "Returns the ISO week number (1-53) for `date`.
+
+  Week 1 is the week containing January 4 (first week with 4+ days in new year).
+  Weeks start on Monday per ISO 8601.
+
+  Example:
+    (iso-week-number date)  ; => 15"
+  [date]
+  (let [thursday (thursday-of-week date)
+        {::keys [year]} (date->breakdown thursday #{})
+        jan4 (breakdown->date {::year year ::month 1 ::day-of-month 4})
+        jan4-thursday (thursday-of-week jan4)
+        week1-start (- jan4-thursday (* 3 ticks-per-day))   ; Monday of week 1
+        days-since-week1 (quot (- thursday week1-start) ticks-per-day)]
+    (int (inc (quot days-since-week1 7)))))
+
+(s/fdef iso-week-number
+  :args (s/cat :date ::date)
+  :ret (s/int-in 1 54))
+
+(defn format-iso-week-date
+  "Formats `date` as an ISO week date string.
+
+  Format: YYYY-Www-D (e.g., '2020-W15-3' for Wednesday of week 15)
+
+  Example:
+    (format-iso-week-date date)  ; => \"2020-W15-3\""
+  [date]
+  (let [year (int (iso-week-year date))
+        week (int (iso-week-number date))
+        dow (day-of-week date)
+        ;; ISO day of week: Monday=1, Sunday=7
+        dow-index (.indexOf days-of-week dow)
+        iso-dow (if (zero? dow-index) 7 dow-index)]
+    (format "%d-W%02d-%d" year week iso-dow)))
+
+(s/fdef format-iso-week-date
+  :args (s/cat :date ::date)
+  :ret string?)
+
+(defn format-ordinal-date
+  "Formats `date` as an ordinal date string.
+
+  Format: YYYY-DDD (e.g., '2020-045' for February 14)
+
+  Example:
+    (format-ordinal-date date)  ; => \"2020-045\""
+  [date]
+  (let [{::keys [year]} (date->breakdown date #{})
+        day (ordinal-day date)]
+    (format "%d-%03d" year day)))
+
+(s/fdef format-ordinal-date
+  :args (s/cat :date ::date)
+  :ret string?)
+
+;;;RELATIVE FORMATTING
+(defn- pluralize
+  [n word]
+  (let [n (long n)]
+    (if (= n 1)
+      (str n " " word)
+      (str n " " word "s"))))
+
+(defn format-relative
+  "Formats the duration between `date` and `reference-date` as relative text.
+
+  Examples:
+    \"3 days ago\"
+    \"in 2 weeks\"
+    \"yesterday\"
+    \"tomorrow\"
+    \"just now\"
+
+  Optional `reference-date` defaults to current time."
+  ([date] (format-relative date (date$)))
+  ([date reference-date]
+   (let [diff (- date reference-date)
+         abs-diff (m/abs diff)
+         future? (pos? diff)
+         ;; Calculate units
+         minutes (long (quot abs-diff ticks-per-minute))
+         hours (long (quot abs-diff ticks-per-hour))
+         days (long (quot abs-diff ticks-per-day))
+         weeks (long (quot abs-diff ticks-per-week))
+         months (long (m/abs (first (date-range->duration-raw
+                                      (if future?
+                                        [reference-date date]
+                                        [date reference-date])))))
+         years (long (quot months 12))
+         ;; Format based on magnitude
+         text (cond
+                (< abs-diff ticks-per-minute) "just now"
+                (< abs-diff ticks-per-hour) (pluralize minutes "minute")
+                (< abs-diff ticks-per-day) (pluralize hours "hour")
+                (and (= days 1) (not future?)) "yesterday"
+                (and (= days 1) future?) "tomorrow"
+                (< abs-diff (* 7 ticks-per-day)) (pluralize days "day")
+                (< abs-diff (* 30 ticks-per-day)) (pluralize weeks "week")
+                (< months 12) (pluralize months "month")
+                :else (pluralize years "year"))]
+     (cond
+       (= text "just now") text
+       (= text "yesterday") text
+       (= text "tomorrow") text
+       future? (str "in " text)
+       :else (str text " ago")))))
+
+(s/fdef format-relative
+  :args (s/cat :date ::date
+          :reference-date (s/? ::date))
+  :ret string?)
