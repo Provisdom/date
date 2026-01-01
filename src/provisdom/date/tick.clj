@@ -312,6 +312,10 @@
 (def days-of-week
   [:sunday :monday :tuesday :wednesday :thursday :friday :saturday])
 
+(def day-of-week->index
+  "Map from day-of-week keyword to its index (Sunday=0, Saturday=6)."
+  (zipmap days-of-week (range)))
+
 (s/def ::day-of-week (set days-of-week))
 
 (s/def ::holiday-set (s/coll-of ::date :kind set?))
@@ -1087,7 +1091,7 @@
 
   Weeks start on Sunday."
   [date]
-  (let [dow-index (.indexOf days-of-week (day-of-week date))
+  (let [dow-index (day-of-week->index (day-of-week date))
         days-to-subtract (* dow-index ticks-per-day)]
     (start-of-day (- date days-to-subtract))))
 
@@ -1100,7 +1104,7 @@
 
   Weeks start on Sunday."
   [date]
-  (let [dow-index (.indexOf days-of-week (day-of-week date))
+  (let [dow-index (day-of-week->index (day-of-week date))
         days-to-add (* (- 7 dow-index) ticks-per-day)]
     (start-of-day (+ date days-to-add))))
 
@@ -1868,7 +1872,7 @@
         week (int (iso-week-number date))
         dow (day-of-week date)
         ;; ISO day of week: Monday=1, Sunday=7
-        dow-index (.indexOf days-of-week dow)
+        dow-index (day-of-week->index dow)
         iso-dow (if (zero? dow-index) 7 dow-index)]
     (format "%d-W%02d-%d" year week iso-dow)))
 

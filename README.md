@@ -311,6 +311,6 @@ The library centers dates around 2070 as an epoch (rather than 1970/Unix epoch) 
 
 ## License
 
-Copyright © 2016 Provisdom
+Copyright © 2016-2026 Provisdom Corp.
 
 Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
