@@ -488,12 +488,10 @@
 
 (defn ticks->breakdown
   "Breaks down `ticks` into time units.
-  
-  Returns a map with keys like `::weeks`, `::days`, `::hours`, `::minutes`,
-  `::seconds`, `::ms`, `::us`, and `::ticks`.
-  
+
+  Returns a map with keys like `::weeks`, `::days`, `::hours`, `::minutes`, `::seconds`, `::ms`, `::us`, and `::ticks`.
   Optional `ticks-form` set specifies which units to include.
-  
+
   Example:
     (ticks->breakdown 123456789)
     ; => {::days 1 ::hours 10 ::minutes 23 ...}"
@@ -522,11 +520,9 @@
   :ret ::ticks-breakdown)
 
 (defn breakdown->ticks
-  "Converts a `ticks-breakdown` map back to total ticks.
-  
-  Accepts a map with time unit keys and returns the total ticks.
-  Returns an anomaly if the result exceeds long range.
-  
+  "Converts a `ticks-breakdown` map back to total ticks. Accepts a map with time unit keys and returns the total
+  ticks. Returns an anomaly if the result exceeds long range.
+
   Example:
     (breakdown->ticks {::hours 2 ::minutes 30})"
   [ticks-breakdown]
@@ -719,9 +715,7 @@
   :ret ::months-breakdown)
 
 (defn breakdown->months
-  "Converts a `months-breakdown` back to total months.
-  
-  Returns total months or an anomaly if out of range."
+  "Converts a `months-breakdown` back to total months. Returns total months or an anomaly if out of range."
   [months-breakdown]
   (let [{::keys [years months]
          :or    {years 0, months 0}} months-breakdown
@@ -747,13 +741,10 @@
 
 (defn date->breakdown
   "Breaks down a tick `date` into calendar and time components.
-  
-  Returns a map with `::year`, `::month`, `::day-of-month` and optionally
-  time units like `::hours`, `::minutes`, etc.
-  
-  Optional `date-form` set specifies which components to include.
-  Use empty set #{} for just date components.
-  
+
+  Returns a map with `::year`, `::month`, `::day-of-month` and optionally time units like `::hours`, `::minutes`, etc.
+  Optional `date-form` set specifies which components to include. Use empty set `#{}` for just date components.
+
   Example:
     (date->breakdown date-2020)
     ; => {`::year` 2020 `::month` 1 `::day-of-month` 1}"
@@ -794,13 +785,9 @@
   :ret ::date-breakdown)
 
 (defn breakdown->date
-  "Converts a `date-breakdown` map to tick date.
-  
-  Accepts a map with `::year`, `::month`, `::day-of-month` and optional
-  time components. Returns ticks from epoch (2070).
-  
-  The date must be between 1814-07-08 and 2325-06-28.
-  
+  "Converts a `date-breakdown` map to tick date. Accepts a map with `::year`, `::month`, `::day-of-month` and optional
+  time components. Returns ticks from epoch (2070). The date must be between 1814-07-08 and 2325-06-28.
+
   Example:
     (breakdown->date {`::year` 2020 `::month` 1 `::day-of-month` 1})"
   [date-breakdown]
@@ -819,9 +806,8 @@
   :ret ::date)
 
 (defn java-date->date-by-bounding
-  "Converts Java Date to tick date, bounded to supported range.
-  
-  Clamps `java-date` outside 1814-2325 to the boundaries."
+  "Converts Java Date to tick date, bounded to supported range. Clamps `java-date` outside 1814-2325 to the
+  boundaries."
   [java-date]
   (instant->date (java-date->instant-by-bounding java-date)))
 
@@ -830,10 +816,8 @@
   :ret ::date)
 
 (defn date-breakdown?
-  "Returns true if `x` is a valid date breakdown.
-  
-  Checks that the breakdown has valid date components and
-  is within the supported date range."
+  "Returns true if `x` is a valid date breakdown. Checks that the breakdown has valid date components and is within
+  the supported date range."
   [x]
   (and (s/valid? ::core-date-breakdown x)
     (date-breakdown-day-in-month? x)
@@ -909,11 +893,9 @@
          :anomaly ::anomalies/anomaly))
 
 (defn add-months-to-date
-  "Adds `months` to a tick `date`.
-  
-  Preserves day-of-month when possible. Returns anomaly if
-  the resulting date is invalid (e.g., Feb 30).
-  
+  "Adds `months` to a tick `date`. Preserves day-of-month when possible. Returns anomaly if the resulting date is
+  invalid (e.g., Feb 30).
+
   Example:
     (add-months-to-date date-2020 3)  ; 3 months later
     (add-months-to-date date-2020 -6) ; 6 months earlier"
@@ -939,10 +921,9 @@
 
 (defn day-of-week
   "Returns the day of week for a given `date`.
-  
-  Returns one of: :monday, :tuesday, :wednesday, :thursday,
-  :friday, :saturday, :sunday.
-  
+
+  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`, `:sunday`.
+
   Example:
     (day-of-week date-2020) ; => :wednesday"
   [date]
@@ -1147,9 +1128,7 @@
   :ret ::date)
 
 (defn ticks-in-month
-  "Returns the number of ticks in the month containing `date`.
-  
-  Accounts for varying month lengths and leap years."
+  "Returns the number of ticks in the month containing `date`. Accounts for varying month lengths and leap years."
   [date]
   (let [{::keys [year month]} (date->breakdown date)]
     (* (instant/days-in-month [year month]) ticks-per-day)))
@@ -1238,10 +1217,9 @@
          :anomaly ::anomalies/anomaly))
 
 (defn date-range->prorated-months
-  "Converts date range to the prorated (fractional) months.
-  
-  Accounts for partial months at the start and end of the range.
-  
+  "Converts date range to the prorated (fractional) months. Accounts for partial months at the start and end of the
+  range.
+
   Example:
     (date-range->prorated-months [start end])
     ; => 6.23 ; 6.23 months"
@@ -1378,9 +1356,7 @@
 
 ;;;AVERAGE YEARS
 (defn ticks->average-years
-  "Converts `ticks` to average years.
-  
-  Uses the average year length of 365.2425 days."
+  "Converts `ticks` to average years. Uses the average year length of 365.2425 days."
   [ticks]
   (/ ticks (double ticks-per-average-year)))
 
@@ -1397,11 +1373,8 @@
   (/ m/min-long (double ticks-per-average-year)))
 
 (defn average-years->ticks
-  "Converts `average-years` to ticks.
-
-  Uses the average year length of 365.2425 days.
-  Input must be in range [min-average-years, max-average-years] (approximately ±255 years)
-  to avoid long overflow."
+  "Converts `average-years` to ticks. Uses the average year length of 365.2425 days. Input must be in range
+  `[min-average-years, max-average-years]` (approximately +/-255 years) to avoid long overflow."
   [average-years]
   (long (* average-years ticks-per-average-year)))
 
@@ -1458,9 +1431,7 @@
   :ret boolean?)
 
 (defn same-day?
-  "Returns true if both dates fall on the same calendar day.
-  
-  Ignores time-of-day components."
+  "Returns true if both dates fall on the same calendar day. Ignores time-of-day components."
   [[start-date end-date]]
   (let [start-breakdown (dissoc (date->breakdown start-date #{}) ::ticks)
         end-breakdown (dissoc (date->breakdown end-date #{}) ::ticks)]
@@ -1695,7 +1666,7 @@
   :ret boolean?)
 
 (defn range-intersection
-  "Returns the intersection of two date ranges, or nil if no overlap.
+  "Returns the intersection of two date ranges, or `nil` if no overlap.
 
   Example:
     (range-intersection [start1 end1] [start2 end2])
@@ -1824,10 +1795,8 @@
     (+ date (* days-to-thursday ticks-per-day))))
 
 (defn iso-week-year
-  "Returns the ISO week-numbering year for `date`.
-
-  The ISO week year may differ from the calendar year for dates
-  near year boundaries. Week 1 is the week containing January 4.
+  "Returns the ISO week-numbering year for `date`. The ISO week year may differ from the calendar year for dates near
+  year boundaries. Week 1 is the week containing January 4.
 
   Example:
     (iso-week-year date)  ; => 2020"
@@ -1840,10 +1809,8 @@
   :ret ::m/int)
 
 (defn iso-week-number
-  "Returns the ISO week number (1-53) for `date`.
-
-  Week 1 is the week containing January 4 (first week with 4+ days in new year).
-  Weeks start on Monday per ISO 8601.
+  "Returns the ISO week number (1-53) for `date`. Week 1 is the week containing January 4 (first week with 4+ days in
+  new year). Weeks start on Monday per ISO 8601.
 
   Example:
     (iso-week-number date)  ; => 15"

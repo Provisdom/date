@@ -319,10 +319,8 @@
   :ret ::m/long)
 
 (defn inst-interval->average-years
-  "Converts an `instant-interval` to average years.
-  
-  Takes a tuple of [start-instant end-instant] and returns
-  the duration as a fractional number of average years."
+  "Converts an `instant-interval` to average years. Takes a tuple of `[start-instant end-instant]` and returns the
+  duration as a fractional number of average years."
   [instant-interval]
   (/ (- (inst->in-ms (second instant-interval))
        (double (inst->in-ms (first instant-interval))))
@@ -415,8 +413,7 @@
 (defn inst->day-of-week
   "Returns the day of week keyword for `inst`.
 
-  Returns one of: :monday, :tuesday, :wednesday, :thursday,
-  :friday, :saturday, :sunday"
+  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`, `:sunday`."
   [inst]
   (calendar-day->day-of-week (.get (inst->calendar inst) Calendar/DAY_OF_WEEK)))
 
@@ -497,10 +494,8 @@
 
 ;;;DURATION ARITHMETIC
 (defn add-ms
-  "Adds `duration-ms` to `inst`, returning a new instant.
-
-  Duration can be negative to subtract time.
-  Result is bounded to valid instant range."
+  "Adds `duration-ms` to `inst`, returning a new instant. Duration can be negative to subtract time. Result is bounded
+  to valid instant range."
   [inst duration-ms]
   (in-ms->inst (ms->in-ms-by-bounding (+ (inst->in-ms inst) duration-ms))))
 
@@ -750,7 +745,7 @@
   :ret boolean?)
 
 (defn interval-intersection
-  "Returns the intersection of two instant intervals, or nil if they don't overlap."
+  "Returns the intersection of two instant intervals, or `nil` if they don't overlap."
   [[a1 a2] [b1 b2]]
   (when (interval-overlaps? [a1 a2] [b1 b2])
     [(if (.after ^Date a1 ^Date b1) a1 b1)
@@ -761,7 +756,7 @@
   :ret (s/nilable ::inst-interval))
 
 (defn interval-union
-  "Returns the union of two instant intervals, or nil if they don't overlap or touch."
+  "Returns the union of two instant intervals, or `nil` if they don't overlap or touch."
   [[a1 a2] [b1 b2]]
   (let [a1-ms (inst->in-ms a1)
         a2-ms (inst->in-ms a2)
@@ -820,13 +815,9 @@
 (defn parse-inst
   "Parses an ISO-8601 date-time string to an instant.
 
-  Accepts formats:
-    - YYYY-MM-DDTHH:MM:SS.sssZ
-    - YYYY-MM-DDTHH:MM:SSZ
-    - YYYY-MM-DDTHH:MMZ
-    - YYYY-MM-DD
+  Accepts formats: `YYYY-MM-DDTHH:MM:SS.sssZ`, `YYYY-MM-DDTHH:MM:SSZ`, `YYYY-MM-DDTHH:MMZ`, `YYYY-MM-DD`.
 
-  Returns nil if parsing fails or date is out of range."
+  Returns `nil` if parsing fails or date is out of range."
   [s]
   (try
     (let [cal (Calendar/getInstance (TimeZone/getTimeZone "UTC"))
@@ -861,9 +852,8 @@
   :ret (s/nilable ::inst))
 
 (defn parse-date
-  "Parses a date-only string (YYYY-MM-DD) to an instant at midnight UTC.
-
-  Returns nil if parsing fails or date is out of range."
+  "Parses a date-only string (`YYYY-MM-DD`) to an instant at midnight UTC. Returns `nil` if parsing fails or date is
+  out of range."
   [s]
   (parse-inst s))
 

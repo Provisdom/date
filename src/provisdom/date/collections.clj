@@ -96,9 +96,7 @@
    (apply int-map/merge-with f date-map1 date-map2 rest)))
 
 (defn map-update
-  "Updates the value at `date` by applying function `f`.
-
-  If `date` is not present, `f` is called with nil.
+  "Updates the value at `date` by applying function `f`. If `date` is not present, `f` is called with `nil`.
 
   Example:
     (map-update dm date inc)"
@@ -106,17 +104,14 @@
   ([date-map date f & args] (apply int-map/update date-map date f args)))
 
 (defn map-update!
-  "Transient version of map-update for performance-critical code.
-
-  Mutates the transient date-map in place."
+  "Transient version of [[map-update]] for performance-critical code. Mutates the transient date-map in place."
   ([date-map date f] (int-map/update! date-map date f))
   ([date-map date f & args] (apply int-map/update! date-map date f args)))
 
 ;;;DATE SET
 (defn date-set
-  "Creates a date-set for sparse date collections.
-
-  Use dense-date-set when dates are densely packed (e.g., consecutive days).
+  "Creates a date-set for sparse date collections. Use [[dense-date-set]] when dates are densely packed (e.g.,
+  consecutive days).
 
   Example:
     (date-set [date1 date2 date3])"
@@ -124,10 +119,8 @@
   ([dates] (int-map/int-set dates)))
 
 (defn dense-date-set
-  "Creates a dense date-set optimized for densely packed dates.
-
-  More memory efficient than regular date-set when dates are close together
-  (e.g., consecutive days, intraday timestamps, or time series data).
+  "Creates a dense date-set optimized for densely packed dates. More memory efficient than [[date-set]] when dates are
+  close together (e.g., consecutive days, intraday timestamps, or time series data).
 
   Example:
     (dense-date-set consecutive-trading-days)"
@@ -239,7 +232,7 @@
 
 ;;;NEAREST-DATE LOOKUPS
 (defn set-floor
-  "Returns the greatest date in `date-set` that is <= `date`, or nil if none."
+  "Returns the greatest date in `date-set` that is <= `date`, or `nil` if none."
   [date-set date]
   (reduce (fn [best d]
             (if (<= d date)
@@ -254,7 +247,7 @@
   :ret (s/nilable ::tick/date))
 
 (defn set-ceiling
-  "Returns the least date in `date-set` that is >= `date`, or nil if none."
+  "Returns the least date in `date-set` that is >= `date`, or `nil` if none."
   [date-set date]
   (reduce (fn [_ d]
             (when (>= d date)
@@ -268,9 +261,8 @@
   :ret (s/nilable ::tick/date))
 
 (defn map-floor
-  "Returns the entry [date value] in `date-map` where date is <= `date`, or nil.
-
-  Returns the entry with the greatest date that doesn't exceed `date`."
+  "Returns the entry `[date value]` in `date-map` where date is <= `date`, or `nil`. Returns the entry with the
+  greatest date that doesn't exceed `date`."
   [date-map date]
   (reduce (fn [best [k _ :as entry]]
             (if (<= k date)
@@ -285,9 +277,8 @@
   :ret (s/nilable (s/tuple ::tick/date any?)))
 
 (defn map-ceiling
-  "Returns the entry [date value] in `date-map` where date is >= `date`, or nil.
-
-  Returns the entry with the least date that is at least `date`."
+  "Returns the entry `[date value]` in `date-map` where date is >= `date`, or `nil`. Returns the entry with the least
+  date that is at least `date`."
   [date-map date]
   (reduce (fn [_ [k _ :as entry]]
             (when (>= k date)
