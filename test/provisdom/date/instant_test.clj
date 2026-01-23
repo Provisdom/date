@@ -4,7 +4,7 @@
     [provisdom.math.core :as m]
     [provisdom.test.core :as t]))
 
-;;2 seconds
+;;10 seconds
 
 (set! *warn-on-reflection* true)
 
@@ -130,7 +130,7 @@
 
 (t/deftest average-years->in-ms-test
   (t/with-instrument `instant/average-years->in-ms
-    (t/is-spec-check instant/average-years->in-ms {:num-tests 15}))
+    (t/is-spec-check instant/average-years->in-ms))
   (t/with-instrument :all
     (t/is= 31556952000 (instant/average-years->in-ms 1.0))
     (t/is= 0 (instant/average-years->in-ms 0.0))
@@ -287,7 +287,7 @@
 ;;;DURATION ARITHMETIC
 (t/deftest add-ms-test
   (t/with-instrument `instant/add-ms
-    (t/is-spec-check instant/add-ms {:num-tests 15}))
+    (t/is-spec-check instant/add-ms))
   (t/with-instrument :all
     (t/is= #inst"2024-03-15T00:00:01.000-00:00"
       (instant/add-ms #inst"2024-03-15T00:00:00.000-00:00" 1000))
@@ -299,28 +299,28 @@
 
 (t/deftest add-seconds-test
   (t/with-instrument `instant/add-seconds
-    (t/is-spec-check instant/add-seconds {:num-tests 15}))
+    (t/is-spec-check instant/add-seconds))
   (t/with-instrument :all
     (t/is= #inst"2024-03-15T00:01:00.000-00:00"
       (instant/add-seconds #inst"2024-03-15T00:00:00.000-00:00" 60))))
 
 (t/deftest add-minutes-test
   (t/with-instrument `instant/add-minutes
-    (t/is-spec-check instant/add-minutes {:num-tests 15}))
+    (t/is-spec-check instant/add-minutes))
   (t/with-instrument :all
     (t/is= #inst"2024-03-15T01:00:00.000-00:00"
       (instant/add-minutes #inst"2024-03-15T00:00:00.000-00:00" 60))))
 
 (t/deftest add-hours-test
   (t/with-instrument `instant/add-hours
-    (t/is-spec-check instant/add-hours {:num-tests 15}))
+    (t/is-spec-check instant/add-hours))
   (t/with-instrument :all
     (t/is= #inst"2024-03-16T00:00:00.000-00:00"
       (instant/add-hours #inst"2024-03-15T00:00:00.000-00:00" 24))))
 
 (t/deftest add-days-test
   (t/with-instrument `instant/add-days
-    (t/is-spec-check instant/add-days {:num-tests 15}))
+    (t/is-spec-check instant/add-days))
   (t/with-instrument :all
     (t/is= #inst"2024-03-22T00:00:00.000-00:00"
       (instant/add-days #inst"2024-03-15T00:00:00.000-00:00" 7))
@@ -329,7 +329,7 @@
 
 (t/deftest add-weeks-test
   (t/with-instrument `instant/add-weeks
-    (t/is-spec-check instant/add-weeks {:num-tests 15}))
+    (t/is-spec-check instant/add-weeks))
   (t/with-instrument :all
     (t/is= #inst"2024-03-29T00:00:00.000-00:00"
       (instant/add-weeks #inst"2024-03-15T00:00:00.000-00:00" 2))))
@@ -465,7 +465,7 @@
 
 (t/deftest interval-intersection-test
   (t/with-instrument `instant/interval-intersection
-    (t/is-spec-check instant/interval-intersection {:num-tests 15}))
+    (t/is-spec-check instant/interval-intersection))
   (t/with-instrument :all
     (let [a [#inst"2024-03-15T00:00:00.000-00:00" #inst"2024-03-20T00:00:00.000-00:00"]
           b [#inst"2024-03-18T00:00:00.000-00:00" #inst"2024-03-25T00:00:00.000-00:00"]]
@@ -478,7 +478,7 @@
 
 (t/deftest interval-union-test
   (t/with-instrument `instant/interval-union
-    (t/is-spec-check instant/interval-union {:num-tests 15}))
+    (t/is-spec-check instant/interval-union))
   (t/with-instrument :all
     (let [a [#inst"2024-03-15T00:00:00.000-00:00" #inst"2024-03-20T00:00:00.000-00:00"]
           b [#inst"2024-03-18T00:00:00.000-00:00" #inst"2024-03-25T00:00:00.000-00:00"]]
@@ -514,7 +514,7 @@
 ;;;PARSING
 (t/deftest parse-inst-test
   (t/with-instrument `instant/parse-inst
-    (t/is-spec-check instant/parse-inst {:num-tests 10}))
+    (t/is-spec-check instant/parse-inst))
   (t/with-instrument :all
     ;; full format
     (t/is= #inst"2024-03-15T14:30:45.123-00:00"
@@ -535,7 +535,7 @@
 
 (t/deftest parse-date-test
   (t/with-instrument `instant/parse-date
-    (t/is-spec-check instant/parse-date {:num-tests 10}))
+    (t/is-spec-check instant/parse-date))
   (t/with-instrument :all
     (t/is= #inst"2024-03-15T00:00:00.000-00:00"
       (instant/parse-date "2024-03-15"))

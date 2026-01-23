@@ -75,10 +75,9 @@
         (* 1.5 ticks-per-average-year)                ; => 54151729632000000  ; 1.5 years
 
   Technical Design:
-  Tick size ensures temporal models maintain accuracy during partitioning. The tick
-  value makes 400 years divisible by microseconds and by 2^12 and all integers 1-16.
-  Following Gregorian leap year rules (every 4 years, except centuries unless
-  divisible by 400):
+  Tick size ensures temporal models maintain accuracy during partitioning. The tick value makes 400
+  years divisible by microseconds and by 2^12 and all integers 1-16. Following Gregorian leap year
+  rules (every 4 years, except centuries unless divisible by 400):
     400 years = 480 months = 20,871 weeks = 146,097 days
   Therefore:
     146097 × 24 × 60 × 60 × 1,000,000 × 11 × 13 × 8 = ticks in 400 years"
@@ -285,24 +284,24 @@
 
 (defn- date-breakdown-in-range?
   [x]
-  (let [{::keys [year month day-of-month]} x]
-    (let [t (breakdown->ticks (dissoc x ::weeks ::days))]
-      (and (not (anomalies/anomaly? t))
-        (intervals/in-interval? [0 (dec ticks-per-day)] t)
-        (cond (= year 1814)
-          (or (> month 7)
-            (and (= month 7)
-              (or (> day-of-month 8)
-                (and (= day-of-month 8) (>= t 31867145224192)))))
+  (let [{::keys [year month day-of-month]} x
+        t (breakdown->ticks (dissoc x ::weeks ::days))]
+    (and (not (anomalies/anomaly? t))
+      (intervals/in-interval? [0 (dec ticks-per-day)] t)
+      (cond (= year 1814)
+        (or (> month 7)
+          (and (= month 7)
+            (or (> day-of-month 8)
+              (and (= day-of-month 8) (>= t 31867145224192)))))
 
-          (= year 2325)
-          (or (< month 6)
-            (and (= month 6)
-              (or (< day-of-month 28)
-                (and (= day-of-month 28) (<= t 66974454775807)))))
+        (= year 2325)
+        (or (< month 6)
+          (and (= month 6)
+            (or (< day-of-month 28)
+              (and (= day-of-month 28) (<= t 66974454775807)))))
 
-          :else
-          true)))))
+        :else
+        true))))
 
 (s/def ::date-breakdown
   (s/and ::core-date-breakdown
@@ -489,7 +488,9 @@
 (defn ticks->breakdown
   "Breaks down `ticks` into time units.
 
-  Returns a map with keys like `::weeks`, `::days`, `::hours`, `::minutes`, `::seconds`, `::ms`, `::us`, and `::ticks`.
+  Returns a map with keys like `::weeks`, `::days`, `::hours`, `::minutes`, `::seconds`, `::ms`,
+  `::us`, and `::ticks`.
+
   Optional `ticks-form` set specifies which units to include.
 
   Example:
@@ -520,8 +521,8 @@
   :ret ::ticks-breakdown)
 
 (defn breakdown->ticks
-  "Converts a `ticks-breakdown` map back to total ticks. Accepts a map with time unit keys and returns the total
-  ticks. Returns an anomaly if the result exceeds long range.
+  "Converts a `ticks-breakdown` map back to total ticks. Accepts a map with time unit keys and
+  returns the total ticks. Returns an anomaly if the result exceeds long range.
 
   Example:
     (breakdown->ticks {::hours 2 ::minutes 30})"
@@ -556,12 +557,11 @@
   
   Function takes a map with:
   - ::ticks (required): The ticks' value to format
-  - ::fraction-precision (optional): Shows fractional parts with specified
-       precision. Default is 6.
-  - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes,
-       and seconds. Default is false (hide zeros).
-  - ::show-average-years? (optional): When true, shows ticks as average years
-       (ay) instead of detailed time components. Default is true.
+  - ::fraction-precision (optional): Shows fractional parts with specified precision. Default is 6.
+  - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes, and seconds. Default
+       is false (hide zeros).
+  - ::show-average-years? (optional): When true, shows ticks as average years (ay) instead of
+       detailed time components. Default is true.
   
   Example:
     (format-ticks {`::ticks` 123456789})
@@ -593,9 +593,8 @@
         ""))
     ;; Format as detailed time components
     (let [f2 (partial format "%02d")
-          {::keys [weeks days hours minutes seconds ms us ticks]
-           :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0,
-                   ms    0, us 0, ticks 0}
+          {::keys [weeks days hours minutes seconds]
+           :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0}
            :as    breakdown} (ticks->breakdown ticks)
           ticks (breakdown->ticks
                   (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
@@ -715,7 +714,8 @@
   :ret ::months-breakdown)
 
 (defn breakdown->months
-  "Converts a `months-breakdown` back to total months. Returns total months or an anomaly if out of range."
+  "Converts a `months-breakdown` back to total months. Returns total months or an anomaly if out of
+  range."
   [months-breakdown]
   (let [{::keys [years months]
          :or    {years 0, months 0}} months-breakdown
@@ -742,8 +742,11 @@
 (defn date->breakdown
   "Breaks down a tick `date` into calendar and time components.
 
-  Returns a map with `::year`, `::month`, `::day-of-month` and optionally time units like `::hours`, `::minutes`, etc.
-  Optional `date-form` set specifies which components to include. Use empty set `#{}` for just date components.
+  Returns a map with `::year`, `::month`, `::day-of-month` and optionally time units like `::hours`,
+  `::minutes`, etc.
+
+  Optional `date-form` set specifies which components to include. Use empty set `#{}` for just date
+  components.
 
   Example:
     (date->breakdown date-2020)
@@ -785,29 +788,37 @@
   :ret ::date-breakdown)
 
 (defn breakdown->date
-  "Converts a `date-breakdown` map to tick date. Accepts a map with `::year`, `::month`, `::day-of-month` and optional
-  time components. Returns ticks from epoch (2070). The date must be between 1814-07-08 and 2325-06-28.
+  "Converts a `date-breakdown` map to tick date. Accepts a map with `::year`, `::month`,
+  `::day-of-month` and optional time components. Returns ticks from epoch (2070). The date must be
+  between 1814-07-08 and 2325-06-28. Returns anomaly if date is out of range.
 
   Example:
     (breakdown->date {`::year` 2020 `::month` 1 `::day-of-month` 1})"
   [date-breakdown]
   (let [{::keys [year month day-of-month]} date-breakdown
-        ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))
-        days (+' (instant/days-until-month [year month])    ;includes leap-days
-               ;;don't want to double-count leap-days
-               (instant/passed-leap-days [epoch 1] [year 1])
-               (* 365 (+' year (- epoch)))
-               (dec day-of-month))
-        date (+' (*' ticks-per-day days) ticks)]
-    (long date)))
+        ticks (breakdown->ticks (dissoc date-breakdown ::weeks ::days))]
+    (if (anomalies/anomaly? ticks)
+      ticks
+      (let [days (+' (instant/days-until-month [year month]) ;includes leap-days
+                   ;;don't want to double-count leap-days
+                   (instant/passed-leap-days [epoch 1] [year 1])
+                   (* 365 (+' year (- epoch)))
+                   (dec day-of-month))
+            date (+' (*' ticks-per-day days) ticks)]
+        (if (intervals/in-interval? [m/min-long m/max-long] date)
+          (long date)
+          {::anomalies/category ::anomalies/exception
+           ::anomalies/fn       (var breakdown->date)
+           ::anomalies/message  (str "date out of long range: " date)})))))
 
 (s/fdef breakdown->date
   :args (s/cat :date-breakdown ::date-breakdown)
-  :ret ::date)
+  :ret (s/or :date ::date
+         :anomaly ::anomalies/anomaly))
 
 (defn java-date->date-by-bounding
-  "Converts Java Date to tick date, bounded to supported range. Clamps `java-date` outside 1814-2325 to the
-  boundaries."
+  "Converts Java Date to tick date, bounded to supported range. Clamps `java-date` outside 1814-2325
+  to the boundaries."
   [java-date]
   (instant->date (java-date->instant-by-bounding java-date)))
 
@@ -816,8 +827,8 @@
   :ret ::date)
 
 (defn date-breakdown?
-  "Returns true if `x` is a valid date breakdown. Checks that the breakdown has valid date components and is within
-  the supported date range."
+  "Returns true if `x` is a valid date breakdown. Checks that the breakdown has valid date
+  components and is within the supported date range."
   [x]
   (and (s/valid? ::core-date-breakdown x)
     (date-breakdown-day-in-month? x)
@@ -846,8 +857,8 @@
        (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
   ([date seconds-fraction-precision]
    (let [f2 (partial format "%02d")
-         {::keys [year month day-of-month hours minutes seconds ms us ticks]
-          :or    {hours 0, minutes 0, seconds 0, ms 0, us 0, ticks 0}
+         {::keys [year month day-of-month hours minutes seconds]
+          :or    {hours 0, minutes 0, seconds 0}
           :as    breakdown} (date->breakdown date)
          ticks (breakdown->ticks (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
          seconds-fraction (double (/ ticks ticks-per-second))]
@@ -893,8 +904,8 @@
          :anomaly ::anomalies/anomaly))
 
 (defn add-months-to-date
-  "Adds `months` to a tick `date`. Preserves day-of-month when possible. Returns anomaly if the resulting date is
-  invalid (e.g., Feb 30).
+  "Adds `months` to a tick `date`. Preserves day-of-month when possible. Returns anomaly if the
+  resulting date is invalid (e.g., Feb 30).
 
   Example:
     (add-months-to-date date-2020 3)  ; 3 months later
@@ -922,7 +933,8 @@
 (defn day-of-week
   "Returns the day of week for a given `date`.
 
-  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`, `:sunday`.
+  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`,
+  `:sunday`.
 
   Example:
     (day-of-week date-2020) ; => :wednesday"
@@ -1125,10 +1137,12 @@
 
 (s/fdef end-of-quarter
   :args (s/cat :date ::date)
-  :ret ::date)
+  :ret (s/or :date ::date
+         :anomaly ::anomalies/anomaly))
 
 (defn ticks-in-month
-  "Returns the number of ticks in the month containing `date`. Accounts for varying month lengths and leap years."
+  "Returns the number of ticks in the month containing `date`. Accounts for varying month lengths
+  and leap years."
   [date]
   (let [{::keys [year month]} (date->breakdown date)]
     (* (instant/days-in-month [year month]) ticks-per-day)))
@@ -1217,8 +1231,8 @@
          :anomaly ::anomalies/anomaly))
 
 (defn date-range->prorated-months
-  "Converts date range to the prorated (fractional) months. Accounts for partial months at the start and end of the
-  range.
+  "Converts date range to the prorated (fractional) months. Accounts for partial months at the start
+  and end of the range.
 
   Example:
     (date-range->prorated-months [start end])
@@ -1252,10 +1266,10 @@
   Takes a map with:
   - ::duration (required): The [months ticks] duration tuple to format
   - ::fraction-precision (optional): Shows fractional parts with specified precision. Default is 6.
-  - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes,
-         and seconds. Default is false (hide zeros).
+  - ::show-zeros? (optional): When true shows zero weeks, days, hours, minutes, and seconds. Default
+        is false (hide zeros).
   - ::show-average-years? (optional): When true, shows ticks as average years (ay) instead of
-         detailed time components. Default is true.
+        detailed time components. Default is true.
 
   Example:
     (format-duration {::duration [3 123456789]})
@@ -1309,8 +1323,8 @@
   - With average years: \"3mo0.000003ay\"
   - With show-zeros: \"0y3mo0w0d00h00m00.107917s\"
   
-  The ticks portion is parsed using parse-ticks, which automatically
-  handles both detailed time format and average years format.
+  The ticks portion is parsed using parse-ticks, which automatically handles both detailed time
+  format and average years format.
   
   Returns [months ticks] tuple or an anomaly if parsing fails.
   
@@ -1373,8 +1387,9 @@
   (/ m/min-long (double ticks-per-average-year)))
 
 (defn average-years->ticks
-  "Converts `average-years` to ticks. Uses the average year length of 365.2425 days. Input must be in range
-  `[min-average-years, max-average-years]` (approximately +/-255 years) to avoid long overflow."
+  "Converts `average-years` to ticks. Uses the average year length of 365.2425 days. Input must be
+  in range `[min-average-years, max-average-years]` (approximately +/-255 years) to avoid long
+  overflow."
   [average-years]
   (long (* average-years ticks-per-average-year)))
 
@@ -1456,10 +1471,16 @@
           :holiday-set (s/? ::holiday-set))
   :ret boolean?)
 
+(defn- day-of-week-index
+  "Returns numeric day of week (0=Sun, 1=Mon, ..., 6=Sat)."
+  [date]
+  (day-of-week->index (day-of-week date)))
+
 (defn add-business-days
   "Adds `n` business days to `date`.
 
   Skips weekends and optionally holidays. Negative `n` subtracts days.
+  Uses O(1) algorithm for bulk calculation, O(holidays) for holiday adjustment.
 
   Example:
     (add-business-days date-2020 5)        ; 5 business days later
@@ -1468,16 +1489,44 @@
   ([date n holiday-set]
    (if (zero? n)
      date
-     (let [direction (if (pos? n) 1 -1)
-           step (* direction ticks-per-day)]
-       (loop [current date
-              remaining (m/abs n)]
-         (if (zero? remaining)
-           current
-           (let [next-date (+ current step)]
-             (if (business-day? next-date holiday-set)
-               (recur next-date (dec remaining))
-               (recur next-date remaining)))))))))
+     (let [abs-n (m/abs n)
+           direction (if (pos? n) 1 -1)
+           ;; Full weeks and remaining business days
+           full-weeks (quot abs-n 5)
+           remaining (rem abs-n 5)
+           ;; Add full weeks (5 business days = 7 calendar days)
+           ;; Use long arithmetic with overflow check
+           week-ticks (*' (long direction) (long full-weeks) 7 ticks-per-day)
+           date-after-weeks (+' date week-ticks)]
+       ;; Check for overflow before continuing
+       (if-not (intervals/in-interval? [m/min-long m/max-long] date-after-weeks)
+         ;; Return boundary date if overflow
+         (if (pos? direction) m/max-long m/min-long)
+         ;; Handle remaining days by stepping (max 6 steps to cross a weekend)
+         (let [date-after-weeks (long date-after-weeks)
+               step (* direction ticks-per-day)
+               date-after-remaining
+               (loop [current date-after-weeks
+                      rem remaining]
+                 (if (zero? rem)
+                   current
+                   (let [next-date (+ current step)]
+                     (if (weekday? next-date)
+                       (recur next-date (dec rem))
+                       (recur next-date rem)))))
+               ;; Count holidays in traversed range that are weekdays
+               [range-start range-end] (if (pos? direction)
+                                         [date date-after-remaining]
+                                         [date-after-remaining date])
+               holidays-in-range (count (filter (fn [h]
+                                                  (and (> h range-start)
+                                                    (<= h range-end)
+                                                    (weekday? h)))
+                                          holiday-set))]
+           ;; Recursively add more days for each holiday encountered
+           (if (zero? holidays-in-range)
+             date-after-remaining
+             (recur date-after-remaining (* direction holidays-in-range) holiday-set))))))))
 
 (s/fdef add-business-days
   :args (s/cat :date ::date
@@ -1485,10 +1534,22 @@
           :holiday-set (s/? ::holiday-set))
   :ret ::date)
 
+(defn- weekday-count-in-week
+  "Returns count of weekdays from day index `from` up to but not including `to`.
+  Indices: 0=Sun, 1=Mon, ..., 6=Sat. Handles wrap-around."
+  [from to]
+  (if (= from to)
+    0
+    (let [days (if (< from to)
+                 (range from to)
+                 (concat (range from 7) (range 0 to)))]
+      (count (filter #(and (>= % 1) (<= % 5)) days)))))
+
 (defn business-days-between
   "Returns the count of business days in `date-range` (exclusive of end).
 
   Excludes weekends and optionally holidays.
+  Uses O(1) algorithm for bulk calculation, O(holidays) for holiday subtraction.
 
   Example:
     (business-days-between [start-date end-date])
@@ -1499,16 +1560,28 @@
          end (start-of-day end-date)
          [start end sign] (if (<= start end)
                             [start end 1]
-                            [end start -1])]
-     (* sign
-       (loop [current start
-              count 0]
-         (if (>= current end)
-           count
-           (recur (+ current ticks-per-day)
-             (if (business-day? current holiday-set)
-               (inc count)
-               count))))))))
+                            [end start -1])
+         ;; Total calendar days (use auto-promoting arithmetic)
+         total-days (quot (-' end start) ticks-per-day)
+         ;; Full weeks contribute 5 business days each
+         full-weeks (quot total-days 7)
+         remaining-days (long (rem total-days 7))
+         ;; Count weekdays in the partial week
+         start-dow (day-of-week-index start)
+         end-dow (mod (+ start-dow remaining-days) 7)
+         partial-weekdays (weekday-count-in-week start-dow end-dow)
+         ;; Total weekdays
+         total-weekdays (+' (*' 5 full-weeks) partial-weekdays)
+         ;; Subtract holidays that fall on weekdays within range
+         holidays-to-subtract (count (filter (fn [h]
+                                               (and (>= h start)
+                                                 (< h end)
+                                                 (weekday? h)))
+                                       holiday-set))
+         result (*' sign (-' total-weekdays holidays-to-subtract))]
+     (if (intervals/in-interval? [m/min-long m/max-long] result)
+       (long result)
+       (if (pos? sign) m/max-long m/min-long)))))
 
 (s/fdef business-days-between
   :args (s/cat :date-range ::date-range
@@ -1562,7 +1635,8 @@
 (s/fdef start-of-fiscal-year
   :args (s/cat :date ::date
           :fiscal-year-start-month (s/? ::fiscal-year-start-month))
-  :ret ::date)
+  :ret (s/or :date ::date
+         :anomaly ::anomalies/anomaly))
 
 (defn end-of-fiscal-year
   "Returns the first moment of the next fiscal year after `date`.
@@ -1585,7 +1659,8 @@
 (s/fdef end-of-fiscal-year
   :args (s/cat :date ::date
           :fiscal-year-start-month (s/? ::fiscal-year-start-month))
-  :ret ::date)
+  :ret (s/or :date ::date
+         :anomaly ::anomalies/anomaly))
 
 ;;;DATE SEQUENCES
 (defn date-seq
@@ -1596,8 +1671,7 @@
   - :step-amount - number of units per step (default 1)
   - :end-date - optional end date (exclusive)
 
-  The sequence terminates if it reaches invalid dates (outside the
-  supported range 1814-2325).
+  The sequence terminates if it reaches invalid dates (outside the supported range 1814-2325).
 
   Examples:
     (date-seq date-2020)                              ; daily from 2020
@@ -1630,8 +1704,32 @@
        end-date (take-while #(< % end-date))))))
 
 (s/fdef date-seq
-  :args (s/cat :start-date ::date
-          :opts (s/? (s/keys :opt-un [::step-unit ::step-amount ::end-date])))
+  :args (s/with-gen
+          (s/cat :start-date ::date
+            :opts (s/? (s/keys :opt-un [::step-unit ::step-amount ::end-date])))
+          ;; Generator ensures end-date is provided so sequence is bounded
+          #(gen/bind (s/gen ::date)
+             (fn [start-date]
+               (gen/bind (gen/elements [:day :week :month :year])
+                 (fn [step-unit]
+                   (gen/bind (gen/choose 1 3)
+                     (fn [step-amount]
+                       (gen/bind (gen/choose 5 20)
+                         (fn [num-steps]
+                           (let [step-ticks (case step-unit
+                                              :day (* step-amount ticks-per-day)
+                                              :week (* step-amount ticks-per-week)
+                                              :month (* step-amount ticks-per-average-month)
+                                              :year (* step-amount ticks-per-average-year))
+                                 end-date (+' start-date (* num-steps step-ticks))]
+                             (if (intervals/in-interval? [m/min-long m/max-long] end-date)
+                               (gen/return [start-date {:step-unit   step-unit
+                                                        :step-amount step-amount
+                                                        :end-date    (long end-date)}])
+                               (gen/return [start-date {:step-unit   :day
+                                                        :step-amount 1
+                                                        :end-date    (+' start-date
+                                                                       (* 10 ticks-per-day))}]))))))))))))
   :ret (s/coll-of ::date))
 
 ;;;RANGE PREDICATES
@@ -1714,50 +1812,61 @@
   - :last-week, :last-month, :last-quarter, :last-year
   - :trailing-12-months, :trailing-6-months, :trailing-3-months
 
+  Returns anomaly if resulting date would be invalid (e.g., Feb 29 on non-leap year).
+
   Example:
     (period->date-range :ytd reference-date)
     (period->date-range :last-quarter reference-date)"
   [period reference-date]
-  (case period
-    :ytd [(start-of-year reference-date) reference-date]
-    :mtd [(start-of-month reference-date) reference-date]
-    :qtd [(start-of-quarter reference-date) reference-date]
-    :wtd [(start-of-week reference-date) reference-date]
-    :last-7-days [(- reference-date (* 7 ticks-per-day)) reference-date]
-    :last-30-days [(- reference-date (* 30 ticks-per-day)) reference-date]
-    :last-90-days [(- reference-date (* 90 ticks-per-day)) reference-date]
-    :last-week (let [sow (start-of-week reference-date)]
-                 [(- sow ticks-per-week) sow])
-    :last-month (let [som (start-of-month reference-date)]
-                  [(add-months-to-date som -1) som])
-    :last-quarter (let [soq (start-of-quarter reference-date)]
-                    [(add-months-to-date soq -3) soq])
-    :last-year (let [soy (start-of-year reference-date)]
-                 [(add-months-to-date soy -12) soy])
-    :trailing-12-months [(add-months-to-date reference-date -12) reference-date]
-    :trailing-6-months [(add-months-to-date reference-date -6) reference-date]
-    :trailing-3-months [(add-months-to-date reference-date -3) reference-date]))
+  (let [result
+        (case period
+          :ytd [(start-of-year reference-date) reference-date]
+          :mtd [(start-of-month reference-date) reference-date]
+          :qtd [(start-of-quarter reference-date) reference-date]
+          :wtd [(start-of-week reference-date) reference-date]
+          :last-7-days [(- reference-date (* 7 ticks-per-day)) reference-date]
+          :last-30-days [(- reference-date (* 30 ticks-per-day)) reference-date]
+          :last-90-days [(- reference-date (* 90 ticks-per-day)) reference-date]
+          :last-week (let [sow (start-of-week reference-date)]
+                       [(- sow ticks-per-week) sow])
+          :last-month (let [som (start-of-month reference-date)]
+                        [(add-months-to-date som -1) som])
+          :last-quarter (let [soq (start-of-quarter reference-date)]
+                          [(add-months-to-date soq -3) soq])
+          :last-year (let [soy (start-of-year reference-date)]
+                       [(add-months-to-date soy -12) soy])
+          :trailing-12-months [(add-months-to-date reference-date -12) reference-date]
+          :trailing-6-months [(add-months-to-date reference-date -6) reference-date]
+          :trailing-3-months [(add-months-to-date reference-date -3) reference-date])]
+    (if (and (vector? result) (anomalies/anomaly? (first result)))
+      (first result)
+      result)))
 
 (s/fdef period->date-range
   :args (s/cat :period ::named-period
           :reference-date ::date)
-  :ret ::date-range)
+  :ret (s/or :date-range ::date-range
+         :anomaly ::anomalies/anomaly))
 
 (defn same-period-previous-year
   "Returns the date range for the same named period in the previous year.
 
-  Useful for year-over-year comparisons.
+  Useful for year-over-year comparisons. Returns anomaly if the reference date
+  can't be represented in the previous year (e.g., Feb 29 on non-leap year).
 
   Example:
     (same-period-previous-year :last-month reference-date)"
   [period reference-date]
   (let [prev-year-ref (add-months-to-date reference-date -12)]
-    (period->date-range period prev-year-ref)))
+    (if (anomalies/anomaly? prev-year-ref)
+      prev-year-ref
+      (period->date-range period prev-year-ref))))
 
 (s/fdef same-period-previous-year
   :args (s/cat :period ::named-period
           :reference-date ::date)
-  :ret ::date-range)
+  :ret (s/or :date-range ::date-range
+         :anomaly ::anomalies/anomaly))
 
 ;;;ISO WEEK DATES & ORDINAL DATES
 (defn ordinal-day
@@ -1795,8 +1904,8 @@
     (+ date (* days-to-thursday ticks-per-day))))
 
 (defn iso-week-year
-  "Returns the ISO week-numbering year for `date`. The ISO week year may differ from the calendar year for dates near
-  year boundaries. Week 1 is the week containing January 4.
+  "Returns the ISO week-numbering year for `date`. The ISO week year may differ from the calendar
+  year for dates near year boundaries. Week 1 is the week containing January 4.
 
   Example:
     (iso-week-year date)  ; => 2020"
@@ -1809,8 +1918,8 @@
   :ret ::m/int)
 
 (defn iso-week-number
-  "Returns the ISO week number (1-53) for `date`. Week 1 is the week containing January 4 (first week with 4+ days in
-  new year). Weeks start on Monday per ISO 8601.
+  "Returns the ISO week number (1-53) for `date`. Week 1 is the week containing January 4 (first
+  week with 4+ days in new year). Weeks start on Monday per ISO 8601.
 
   Example:
     (iso-week-number date)  ; => 15"
@@ -1884,8 +1993,8 @@
   Optional `reference-date` defaults to current time."
   ([date] (format-relative date (date$)))
   ([date reference-date]
-   (let [diff (- date reference-date)
-         abs-diff (m/abs diff)
+   (let [diff (-' date reference-date)
+         abs-diff (m/abs' diff)
          future? (pos? diff)
          ;; Calculate units
          minutes (long (quot abs-diff ticks-per-minute))

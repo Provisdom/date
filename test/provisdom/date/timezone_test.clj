@@ -57,9 +57,9 @@
       (t/is= -5 (::tz/offset-hours offset))
       (t/is= 0 (::tz/offset-minutes offset)))
     ;; New York in July (EDT = UTC-4)
-    (let [july-2020 (tick/breakdown->date {::tick/year         2020
+    (let [july-2020 (tick/breakdown->date {::tick/day-of-month 15
                                            ::tick/month        7
-                                           ::tick/day-of-month 15})
+                                           ::tick/year         2020})
           offset (tz/zone-offset-at-date "America/New_York" july-2020)]
       (t/is= -4 (::tz/offset-hours offset))
       (t/is= 0 (::tz/offset-minutes offset)))
@@ -89,15 +89,15 @@
     ;; New York in January is NOT in DST
     (t/is-not (tz/dst? "America/New_York" tick/date-2020))
     ;; New York in July IS in DST
-    (let [july-2020 (tick/breakdown->date {::tick/year         2020
+    (let [july-2020 (tick/breakdown->date {::tick/day-of-month 15
                                            ::tick/month        7
-                                           ::tick/day-of-month 15})]
+                                           ::tick/year         2020})]
       (t/is (tz/dst? "America/New_York" july-2020)))
     ;; UTC never has DST
     (t/is-not (tz/dst? "UTC" tick/date-2020))
-    (let [july-2020 (tick/breakdown->date {::tick/year         2020
+    (let [july-2020 (tick/breakdown->date {::tick/day-of-month 15
                                            ::tick/month        7
-                                           ::tick/day-of-month 15})]
+                                           ::tick/year         2020})]
       (t/is-not (tz/dst? "UTC" july-2020)))))
 
 (t/deftest ambiguous-local-time?-test
@@ -107,15 +107,15 @@
     ;; Nov 3, 2024 at 1:30 AM is ambiguous in New York (fall-back)
     (t/is
       (tz/ambiguous-local-time? "America/New_York"
-        {::tick/year 2024 ::tick/month 11 ::tick/day-of-month 3 ::tick/hours 1 ::tick/minutes 30}))
+        {::tick/day-of-month 3 ::tick/hours 1 ::tick/minutes 30 ::tick/month 11 ::tick/year 2024}))
     ;; Nov 3, 2024 at 3:00 AM is NOT ambiguous
     (t/is-not
       (tz/ambiguous-local-time? "America/New_York"
-        {::tick/year 2024 ::tick/month 11 ::tick/day-of-month 3 ::tick/hours 3 ::tick/minutes 0}))
+        {::tick/day-of-month 3 ::tick/hours 3 ::tick/minutes 0 ::tick/month 11 ::tick/year 2024}))
     ;; Regular time is not ambiguous
     (t/is-not
       (tz/ambiguous-local-time? "America/New_York"
-        {::tick/year 2024 ::tick/month 7 ::tick/day-of-month 4 ::tick/hours 12 ::tick/minutes 0}))))
+        {::tick/day-of-month 4 ::tick/hours 12 ::tick/minutes 0 ::tick/month 7 ::tick/year 2024}))))
 
 (t/deftest invalid-local-time?-test
   (t/with-instrument `tz/invalid-local-time?
@@ -124,28 +124,28 @@
     ;; Mar 10, 2024 at 2:30 AM is invalid in New York (spring-forward)
     (t/is
       (tz/invalid-local-time? "America/New_York"
-        {::tick/year 2024 ::tick/month 3 ::tick/day-of-month 10 ::tick/hours 2 ::tick/minutes 30}))
+        {::tick/day-of-month 10 ::tick/hours 2 ::tick/minutes 30 ::tick/month 3 ::tick/year 2024}))
     ;; Mar 10, 2024 at 3:00 AM is valid (after the gap)
     (t/is-not
       (tz/invalid-local-time? "America/New_York"
-        {::tick/year 2024 ::tick/month 3 ::tick/day-of-month 10 ::tick/hours 3 ::tick/minutes 0}))
+        {::tick/day-of-month 10 ::tick/hours 3 ::tick/minutes 0 ::tick/month 3 ::tick/year 2024}))
     ;; Mar 10, 2024 at 1:59 AM is valid (before the gap)
     (t/is-not
       (tz/invalid-local-time? "America/New_York"
-        {::tick/year 2024 ::tick/month 3 ::tick/day-of-month 10 ::tick/hours 1 ::tick/minutes 59}))
+        {::tick/day-of-month 10 ::tick/hours 1 ::tick/minutes 59 ::tick/month 3 ::tick/year 2024}))
     ;; Regular time is not invalid
     (t/is-not
       (tz/invalid-local-time? "America/New_York"
-        {::tick/year 2024 ::tick/month 7 ::tick/day-of-month 4 ::tick/hours 12 ::tick/minutes 0}))))
+        {::tick/day-of-month 4 ::tick/hours 12 ::tick/minutes 0 ::tick/month 7 ::tick/year 2024}))))
 
 (t/deftest next-dst-transition-test
   (t/with-instrument `tz/next-dst-transition
     (t/is-spec-check tz/next-dst-transition))
   (t/with-instrument :all
     ;; From Jan 2024, next transition is spring-forward in March
-    (let [jan-2024 (tick/breakdown->date {::tick/year         2024
+    (let [jan-2024 (tick/breakdown->date {::tick/day-of-month 15
                                           ::tick/month        1
-                                          ::tick/day-of-month 15})
+                                          ::tick/year         2024})
           transition (tz/next-dst-transition "America/New_York" jan-2024)]
       (t/is (some? transition))
       (t/is= :gap (::tz/transition-type transition))
@@ -153,9 +153,9 @@
       (t/is= -5 (::tz/offset-hours (::tz/offset-before transition)))
       (t/is= -4 (::tz/offset-hours (::tz/offset-after transition))))
     ;; From July 2024, next transition is fall-back in November
-    (let [july-2024 (tick/breakdown->date {::tick/year         2024
+    (let [july-2024 (tick/breakdown->date {::tick/day-of-month 15
                                            ::tick/month        7
-                                           ::tick/day-of-month 15})
+                                           ::tick/year         2024})
           transition (tz/next-dst-transition "America/New_York" july-2024)]
       (t/is (some? transition))
       (t/is= :overlap (::tz/transition-type transition))
@@ -193,30 +193,30 @@
     (t/is-spec-check tz/local-breakdown->date))
   (t/with-instrument :all
     ;; Simple conversion
-    (let [breakdown {::tick/year         2020
-                     ::tick/month        1
-                     ::tick/day-of-month 1
+    (let [breakdown {::tick/day-of-month 1
                      ::tick/hours        0
                      ::tick/minutes      0
-                     ::tick/seconds      0}
+                     ::tick/month        1
+                     ::tick/seconds      0
+                     ::tick/year         2020}
           date (tz/local-breakdown->date "UTC" breakdown)]
       (t/is= tick/date-2020 date))
     ;; New York local time to UTC
-    (let [breakdown {::tick/year         2019
-                     ::tick/month        12
-                     ::tick/day-of-month 31
+    (let [breakdown {::tick/day-of-month 31
                      ::tick/hours        19
                      ::tick/minutes      0
-                     ::tick/seconds      0}
+                     ::tick/month        12
+                     ::tick/seconds      0
+                     ::tick/year         2019}
           date (tz/local-breakdown->date "America/New_York" breakdown)]
       (t/is= tick/date-2020 date))
     ;; Ambiguous time - earlier (default)
-    (let [breakdown {::tick/year         2024
-                     ::tick/month        11
-                     ::tick/day-of-month 3
+    (let [breakdown {::tick/day-of-month 3
                      ::tick/hours        1
                      ::tick/minutes      30
-                     ::tick/seconds      0}
+                     ::tick/month        11
+                     ::tick/seconds      0
+                     ::tick/year         2024}
           date-earlier (tz/local-breakdown->date "America/New_York" breakdown)
           date-later (tz/local-breakdown->date "America/New_York"
                        breakdown {::tz/dst-resolution :later})]
@@ -224,34 +224,34 @@
       (t/is (< date-earlier date-later))
       (t/is= tick/ticks-per-hour (- date-later date-earlier)))
     ;; Ambiguous time - error
-    (let [breakdown {::tick/year         2024
-                     ::tick/month        11
-                     ::tick/day-of-month 3
+    (let [breakdown {::tick/day-of-month 3
                      ::tick/hours        1
                      ::tick/minutes      30
-                     ::tick/seconds      0}
+                     ::tick/month        11
+                     ::tick/seconds      0
+                     ::tick/year         2024}
           result (tz/local-breakdown->date "America/New_York"
                    breakdown {::tz/dst-resolution :error})]
       (t/is (anomalies/anomaly? result)))
     ;; Invalid time - post-gap (default)
-    (let [breakdown {::tick/year         2024
-                     ::tick/month        3
-                     ::tick/day-of-month 10
+    (let [breakdown {::tick/day-of-month 10
                      ::tick/hours        2
                      ::tick/minutes      30
-                     ::tick/seconds      0}
+                     ::tick/month        3
+                     ::tick/seconds      0
+                     ::tick/year         2024}
           date (tz/local-breakdown->date "America/New_York" breakdown)
           ;; Should resolve to 3:00 AM EDT (the moment after the gap)
           result-breakdown (tz/date->local-breakdown "America/New_York" date)]
       (t/is= 3 (::tick/hours result-breakdown))
       (t/is= 0 (::tick/minutes result-breakdown)))
     ;; Invalid time - pre-gap
-    (let [breakdown {::tick/year         2024
-                     ::tick/month        3
-                     ::tick/day-of-month 10
+    (let [breakdown {::tick/day-of-month 10
                      ::tick/hours        2
                      ::tick/minutes      30
-                     ::tick/seconds      0}
+                     ::tick/month        3
+                     ::tick/seconds      0
+                     ::tick/year         2024}
           date (tz/local-breakdown->date "America/New_York"
                  breakdown {::tz/gap-resolution :pre-gap})
           ;; Should resolve to just before 2:00 AM EST
@@ -259,12 +259,12 @@
       (t/is= 1 (::tick/hours result-breakdown))
       (t/is= 59 (::tick/minutes result-breakdown)))
     ;; Invalid time - error
-    (let [breakdown {::tick/year         2024
-                     ::tick/month        3
-                     ::tick/day-of-month 10
+    (let [breakdown {::tick/day-of-month 10
                      ::tick/hours        2
                      ::tick/minutes      30
-                     ::tick/seconds      0}
+                     ::tick/month        3
+                     ::tick/seconds      0
+                     ::tick/year         2024}
           result (tz/local-breakdown->date "America/New_York"
                    breakdown {::tz/gap-resolution :error})]
       (t/is (anomalies/anomaly? result)))))

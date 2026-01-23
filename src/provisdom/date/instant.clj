@@ -102,14 +102,13 @@
 (def ^:const months->name
   "Month names indexed by month number (0-based).
   Use `(nth months->name (dec month))` for 1-based month numbers."
-  ["January", "February", "March", "April", "May", "June", "July", "August",
-   "September", "October", "November", "December"])
+  ["January" "February" "March" "April" "May" "June" "July" "August" "September" "October"
+   "November" "December"])
 
 (def ^:const months->abbreviation
   "Month abbreviations indexed by month number (0-based).
   Use `(nth months->abbreviation (dec month))` for 1-based month numbers."
-  ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct",
-   "Nov", "Dec"])
+  ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])
 
 (s/def ::year (s/int-in 0 10000))
 (s/def ::month (s/int-in 1 13))
@@ -154,8 +153,8 @@
 (defn leap-year?
   "Returns true if `year` is a leap year.
   
-  Uses Gregorian calendar rules: divisible by 4, except years
-  divisible by 100 unless also divisible by 400."
+  Uses Gregorian calendar rules: divisible by 4, except years divisible by 100 unless also divisible
+  by 400."
   [year]
   (or (zero? (mod year 400))
     (and (zero? (mod year 4))
@@ -211,8 +210,7 @@
 (defn passed-leap-days
   "Returns the number of leap days between two year/month pairs.
   
-  Calculates the difference in accumulated leap days from the first
-  year/month to the second.
+  Calculates the difference in accumulated leap days from the first year/month to the second.
   
   Example:
     (passed-leap-days [2000 1] [2004 1]) ; => 1"
@@ -310,17 +308,18 @@
   "Converts `average-years` to milliseconds.
 
   Uses average year length of 365.2425 days.
-  Returns a long (truncated)."
+  Returns a long (truncated), bounded to valid range."
   [average-years]
-  (long (* average-years ms-per-average-year)))
+  (let [result (* (double average-years) ms-per-average-year)]
+    (long (intervals/bound-by-interval [(double m/min-long) (double m/max-long)] result))))
 
 (s/fdef average-years->in-ms
   :args (s/cat :average-years ::average-years)
   :ret ::m/long)
 
 (defn inst-interval->average-years
-  "Converts an `instant-interval` to average years. Takes a tuple of `[start-instant end-instant]` and returns the
-  duration as a fractional number of average years."
+  "Converts an `instant-interval` to average years. Takes a tuple of `[start-instant end-instant]`
+  and returns the duration as a fractional number of average years."
   [instant-interval]
   (/ (- (inst->in-ms (second instant-interval))
        (double (inst->in-ms (first instant-interval))))
@@ -413,7 +412,8 @@
 (defn inst->day-of-week
   "Returns the day of week keyword for `inst`.
 
-  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`, `:sunday`."
+  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`,
+  `:sunday`."
   [inst]
   (calendar-day->day-of-week (.get (inst->calendar inst) Calendar/DAY_OF_WEEK)))
 
@@ -494,10 +494,10 @@
 
 ;;;DURATION ARITHMETIC
 (defn add-ms
-  "Adds `duration-ms` to `inst`, returning a new instant. Duration can be negative to subtract time. Result is bounded
-  to valid instant range."
+  "Adds `duration-ms` to `inst`, returning a new instant. Duration can be negative to subtract time.
+  Result is bounded to valid instant range."
   [inst duration-ms]
-  (in-ms->inst (ms->in-ms-by-bounding (+ (inst->in-ms inst) duration-ms))))
+  (in-ms->inst (ms->in-ms-by-bounding (+' (inst->in-ms inst) duration-ms))))
 
 (s/fdef add-ms
   :args (s/cat :inst ::inst :duration-ms ::duration-ms)
@@ -506,7 +506,7 @@
 (defn add-seconds
   "Adds `seconds` to `inst`, returning a new instant."
   [inst seconds]
-  (add-ms inst (* seconds ms-per-second)))
+  (add-ms inst (*' seconds ms-per-second)))
 
 (s/fdef add-seconds
   :args (s/cat :inst ::inst :seconds ::m/long)
@@ -515,7 +515,7 @@
 (defn add-minutes
   "Adds `minutes` to `inst`, returning a new instant."
   [inst minutes]
-  (add-ms inst (* minutes ms-per-minute)))
+  (add-ms inst (*' minutes ms-per-minute)))
 
 (s/fdef add-minutes
   :args (s/cat :inst ::inst :minutes ::m/long)
@@ -524,7 +524,7 @@
 (defn add-hours
   "Adds `hours` to `inst`, returning a new instant."
   [inst hours]
-  (add-ms inst (* hours ms-per-hour)))
+  (add-ms inst (*' hours ms-per-hour)))
 
 (s/fdef add-hours
   :args (s/cat :inst ::inst :hours ::m/long)
@@ -533,7 +533,7 @@
 (defn add-days
   "Adds `days` to `inst`, returning a new instant."
   [inst days]
-  (add-ms inst (* days ms-per-day)))
+  (add-ms inst (*' days ms-per-day)))
 
 (s/fdef add-days
   :args (s/cat :inst ::inst :days ::m/long)
@@ -542,7 +542,7 @@
 (defn add-weeks
   "Adds `weeks` to `inst`, returning a new instant."
   [inst weeks]
-  (add-ms inst (* weeks ms-per-week)))
+  (add-ms inst (*' weeks ms-per-week)))
 
 (s/fdef add-weeks
   :args (s/cat :inst ::inst :weeks ::m/long)
@@ -815,7 +815,8 @@
 (defn parse-inst
   "Parses an ISO-8601 date-time string to an instant.
 
-  Accepts formats: `YYYY-MM-DDTHH:MM:SS.sssZ`, `YYYY-MM-DDTHH:MM:SSZ`, `YYYY-MM-DDTHH:MMZ`, `YYYY-MM-DD`.
+  Accepts formats: `YYYY-MM-DDTHH:MM:SS.sssZ`, `YYYY-MM-DDTHH:MM:SSZ`, `YYYY-MM-DDTHH:MMZ`,
+  `YYYY-MM-DD`.
 
   Returns `nil` if parsing fails or date is out of range."
   [s]
@@ -852,8 +853,8 @@
   :ret (s/nilable ::inst))
 
 (defn parse-date
-  "Parses a date-only string (`YYYY-MM-DD`) to an instant at midnight UTC. Returns `nil` if parsing fails or date is
-  out of range."
+  "Parses a date-only string (`YYYY-MM-DD`) to an instant at midnight UTC. Returns `nil` if parsing
+  fails or date is out of range."
   [s]
   (parse-inst s))
 

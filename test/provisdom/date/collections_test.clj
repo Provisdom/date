@@ -4,9 +4,11 @@
     [provisdom.date.tick :as tick]
     [provisdom.test.core :as t]))
 
-;;1 second
+;;11 seconds
 
 (set! *warn-on-reflection* true)
+
+;;No need for spec-checking DATE SET and DATE MAP functions since they are thin wrappers
 
 ;;;DATE MAP
 (t/deftest date-map?-test
@@ -50,7 +52,7 @@
           merged (coll/map-merge dm1 dm2)]
       (t/is= 3 (count merged))
       (t/is= :a (get merged d1))
-      (t/is= :b-override (get merged d2)) ;; right takes precedence
+      (t/is= :b-override (get merged d2))                   ;; right takes precedence
       (t/is= :c (get merged d3)))
     ;; three maps
     (let [d1 tick/date-2020
@@ -58,7 +60,7 @@
           dm2 (coll/date-map d1 2)
           dm3 (coll/date-map d1 3)
           merged (coll/map-merge dm1 dm2 dm3)]
-      (t/is= 3 (get merged d1))))) ;; rightmost wins
+      (t/is= 3 (get merged d1)))))                          ;; rightmost wins
 
 (t/deftest map-merge-with-test
   (t/with-instrument :all
@@ -104,16 +106,16 @@
     ;; transient update
     (let [dm (coll/date-map tick/date-2020 10)
           result (-> dm
-                     transient
-                     (coll/map-update! tick/date-2020 inc)
-                     persistent!)]
+                   transient
+                   (coll/map-update! tick/date-2020 inc)
+                   persistent!)]
       (t/is= 11 (get result tick/date-2020)))
     ;; transient update with extra args
     (let [dm (coll/date-map tick/date-2020 10)
           result (-> dm
-                     transient
-                     (coll/map-update! tick/date-2020 + 5 3)
-                     persistent!)]
+                   transient
+                   (coll/map-update! tick/date-2020 + 5 3)
+                   persistent!)]
       (t/is= 18 (get result tick/date-2020)))))
 
 ;;;DATE SET
@@ -215,7 +217,8 @@
 
 ;;;RANGE CONSTRUCTORS
 (t/deftest date-range-set-test
-  ;; skip spec-check: random start/end/step can create unbounded collections
+  (t/with-instrument `coll/date-range-set
+    (t/is-spec-check coll/date-range-set))
   (t/with-instrument :all
     (let [step tick/ticks-per-day
           start tick/date-2020
@@ -228,25 +231,25 @@
       (t/is= 0 (count (coll/date-range-set end start step))))))
 
 (t/deftest date-range-map-test
-  ;; skip spec-check: random start/end/step can create unbounded collections
-  ;; also accepts function arg which can cause instrumentation issues
-  (t/with-instrument :all
-    (let [step tick/ticks-per-day
-          start tick/date-2020
-          end (+ start (* 5 step))
-          dm (coll/date-range-map start end step (constantly 42))]
-      (t/is= 6 (count dm))
-      (t/is= 42 (get dm start))
-      (t/is= 42 (get dm end))
-      ;; test with identity-like fn
-      (let [dm2 (coll/date-range-map start end step #(- % start))]
-        (t/is= 0 (get dm2 start))
-        (t/is= (* 5 step) (get dm2 end))))))
+  (t/with-instrument `coll/date-range-map
+    (t/is-spec-check coll/date-range-map))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  (let [step tick/ticks-per-day
+        start tick/date-2020
+        end (+ start (* 5 step))
+        dm (coll/date-range-map start end step (constantly 42))]
+    (t/is= 6 (count dm))
+    (t/is= 42 (get dm start))
+    (t/is= 42 (get dm end))
+    ;; test with identity-like fn
+    (let [dm2 (coll/date-range-map start end step #(- % start))]
+      (t/is= 0 (get dm2 start))
+      (t/is= (* 5 step) (get dm2 end)))))
 
 ;;;SLICE OPERATIONS
 (t/deftest set-slice-test
   (t/with-instrument `coll/set-slice
-    (t/is-spec-check coll/set-slice {:num-tests 5}))
+    (t/is-spec-check coll/set-slice))
   (t/with-instrument :all
     (let [step tick/ticks-per-day
           start tick/date-2020
@@ -262,7 +265,7 @@
 
 (t/deftest map-slice-test
   (t/with-instrument `coll/map-slice
-    (t/is-spec-check coll/map-slice {:num-tests 5}))
+    (t/is-spec-check coll/map-slice))
   (t/with-instrument :all
     (let [step tick/ticks-per-day
           start tick/date-2020
@@ -276,7 +279,7 @@
 ;;;NEAREST-DATE LOOKUPS
 (t/deftest set-floor-test
   (t/with-instrument `coll/set-floor
-    (t/is-spec-check coll/set-floor {:num-tests 5}))
+    (t/is-spec-check coll/set-floor))
   (t/with-instrument :all
     (let [step tick/ticks-per-day
           start tick/date-2020
@@ -291,7 +294,7 @@
 
 (t/deftest set-ceiling-test
   (t/with-instrument `coll/set-ceiling
-    (t/is-spec-check coll/set-ceiling {:num-tests 5}))
+    (t/is-spec-check coll/set-ceiling))
   (t/with-instrument :all
     (let [step tick/ticks-per-day
           start tick/date-2020
@@ -305,7 +308,7 @@
 
 (t/deftest map-floor-test
   (t/with-instrument `coll/map-floor
-    (t/is-spec-check coll/map-floor {:num-tests 5}))
+    (t/is-spec-check coll/map-floor))
   (t/with-instrument :all
     (let [step tick/ticks-per-day
           start tick/date-2020
@@ -316,7 +319,7 @@
 
 (t/deftest map-ceiling-test
   (t/with-instrument `coll/map-ceiling
-    (t/is-spec-check coll/map-ceiling {:num-tests 5}))
+    (t/is-spec-check coll/map-ceiling))
   (t/with-instrument :all
     (let [step tick/ticks-per-day
           start tick/date-2020
@@ -327,21 +330,23 @@
 
 ;;;FILTER OPERATIONS
 (t/deftest map-filter-vals-test
-  ;; accepts function arg, skip instrumentation for spec-check
-  (t/with-instrument :all
-    (let [step tick/ticks-per-day
-          start tick/date-2020
-          dm (coll/date-range-map start (+ start (* 10 step)) step
-                                  #(mod (/ (- % start) step) 3))]
-      ;; values are [0 1 2 0 1 2 0 1 2 0 1]
-      (t/is= 4 (count (coll/map-filter-vals zero? dm)))
-      (t/is= 7 (count (coll/map-filter-vals pos? dm))))))
+  (t/with-instrument `coll/map-filter-vals
+    (t/is-spec-check coll/map-filter-vals))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  (let [step tick/ticks-per-day
+        start tick/date-2020
+        dm (coll/date-range-map start (+ start (* 10 step)) step
+             #(mod (/ (- % start) step) 3))]
+    ;; values are [0 1 2 0 1 2 0 1 2 0 1]
+    (t/is= 4 (count (coll/map-filter-vals zero? dm)))
+    (t/is= 7 (count (coll/map-filter-vals pos? dm)))))
 
 (t/deftest map-filter-keys-test
-  ;; accepts function arg, skip instrumentation for spec-check
-  (t/with-instrument :all
-    (let [step tick/ticks-per-day
-          start tick/date-2020
-          dm (coll/date-range-map start (+ start (* 10 step)) step (constantly :v))]
-      ;; filter for even day indices (0, 2, 4, 6, 8, 10) -> 6 elements
-      (t/is= 6 (count (coll/map-filter-keys #(even? (/ (- % start) step)) dm))))))
+  (t/with-instrument `coll/map-filter-keys
+    (t/is-spec-check coll/map-filter-keys))
+  ;;no instrumentation; Orchestra fspec validation fails with fn args
+  (let [step tick/ticks-per-day
+        start tick/date-2020
+        dm (coll/date-range-map start (+ start (* 10 step)) step (constantly :v))]
+    ;; filter for even day indices (0, 2, 4, 6, 8, 10) -> 6 elements
+    (t/is= 6 (count (coll/map-filter-keys #(even? (/ (- % start) step)) dm)))))
