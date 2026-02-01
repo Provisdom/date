@@ -8,6 +8,18 @@
 
 (set! *warn-on-reflection* true)
 
+;;;PREDICATES
+(t/deftest first-inst-not-after-second?-test
+  (t/with-instrument `instant/first-inst-not-after-second?
+    (t/is-spec-check `instant/first-inst-not-after-second?))
+  (t/with-instrument :all
+    (t/is (instant/first-inst-not-after-second?
+            [#inst"1970-01-01T00:00:00.000-00:00" #inst"1970-01-01T00:00:00.000-00:00"]))
+    (t/is (instant/first-inst-not-after-second?
+            [#inst"1970-01-01T00:00:00.000-00:00" #inst"2020-01-01T00:00:00.000-00:00"]))
+    (t/is-not (instant/first-inst-not-after-second?
+                [#inst"2020-01-01T00:00:00.000-00:00" #inst"1970-01-01T00:00:00.000-00:00"]))))
+
 ;;;LEAP YEARS
 (t/deftest leap-year?-test
   (t/with-instrument `instant/leap-year?
@@ -66,6 +78,7 @@
 ;; inst$ and in-ms$ test current time - verify they return valid results
 (t/deftest inst$-test
   (t/with-instrument `instant/inst$
+    ;; nondeterministic (returns current time) - limit iterations
     (t/is-spec-check instant/inst$ {:num-tests 3}))
   (t/with-instrument :all
     ;; just verify it returns a valid instant in range
@@ -96,6 +109,7 @@
 ;;;IN-MS
 (t/deftest in-ms$-test
   (t/with-instrument `instant/in-ms$
+    ;; nondeterministic (returns current time) - limit iterations
     (t/is-spec-check instant/in-ms$ {:num-tests 3}))
   (t/with-instrument :all
     ;; verify it returns a valid in-ms value in range
@@ -541,7 +555,8 @@
       (instant/parse-date "2024-03-15"))
     (t/is (nil? (instant/parse-date "invalid")))))
 
-;; round-trip tests
+;;;ROUND TRIP
+;; integration test - no matching source function
 (t/deftest round-trip-test
   (t/with-instrument :all
     ;; format -> parse

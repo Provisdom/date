@@ -1,5 +1,6 @@
 (ns provisdom.date.tick-test
   (:require
+    [clojure.spec.alpha :as s]
     [provisdom.date.tick :as tick]
     [provisdom.math.core :as m]
     [provisdom.test.core :as t])
@@ -9,7 +10,44 @@
 
 (set! *warn-on-reflection* true)
 
-;;;JAVA-DURATION
+(t/deftest date-spec-test
+  ;; No spec-check for macros (spec-generating function)
+  (s/def ::test-date-spec (tick/date-spec {:date-max tick/date-2070 :date-min tick/date-2020}))
+  (t/is (s/valid? ::test-date-spec tick/date-2045))
+  (t/is-not (s/valid? ::test-date-spec tick/date-1970)))
+
+(t/deftest ticks-spec-test
+  ;; No spec-check for macros (spec-generating function)
+  (s/def ::test-ticks-spec (tick/ticks-spec {:ticks-max 1000 :ticks-min -1000}))
+  (t/is (s/valid? ::test-ticks-spec 500))
+  (t/is-not (s/valid? ::test-ticks-spec 2000)))
+
+(t/deftest ticks-non--spec-test
+  ;; No spec-check for macros (spec-generating function)
+  (s/def ::test-ticks-non--spec (tick/ticks-non--spec 1000))
+  (t/is (s/valid? ::test-ticks-non--spec 0))
+  (t/is (s/valid? ::test-ticks-non--spec 500))
+  (t/is-not (s/valid? ::test-ticks-non--spec -1))
+  (t/is-not (s/valid? ::test-ticks-non--spec 1001)))
+
+(t/deftest ticks+-spec-test
+  ;; No spec-check for macros (spec-generating function)
+  (s/def ::test-ticks+-spec (tick/ticks+-spec 1000))
+  (t/is (s/valid? ::test-ticks+-spec 1))
+  (t/is (s/valid? ::test-ticks+-spec 500))
+  (t/is-not (s/valid? ::test-ticks+-spec 0))
+  (t/is-not (s/valid? ::test-ticks+-spec 1001)))
+
+(t/deftest instant-in-range?-test
+  (t/with-instrument `tick/instant-in-range?
+    (t/is-spec-check `tick/instant-in-range?))
+  (t/with-instrument :all
+    (t/is (tick/instant-in-range? #inst"2020-01-01T00:00:00.000-00:00"))
+    (t/is (tick/instant-in-range? #inst"1970-01-01T00:00:00.000-00:00"))
+    (t/is-not (tick/instant-in-range? #inst"0001-01-01T00:00:00.000-00:00"))
+    (t/is-not (tick/instant-in-range? #inst"9999-12-31T23:59:59.999-00:00"))))
+
+;;;JAVA DURATION
 (t/deftest ticks->java-duration-test
   (t/with-instrument `tick/ticks->java-duration
     (t/is-spec-check tick/ticks->java-duration))
@@ -200,7 +238,7 @@
         {::tick/months 7
          ::tick/years  43}))))
 
-;;;DATE
+;;;DATES
 (t/deftest date$-test
   (t/with-instrument `tick/date$
     (t/is-spec-check tick/date$))
@@ -398,6 +436,76 @@
     (t/is= (+ tick/date-2020 tick/ticks-per-day) (tick/end-of-day tick/date-2020))
     (t/is= (+ tick/date-2020 tick/ticks-per-day) (tick/end-of-day (+ tick/date-2020 2342478)))))
 
+(t/deftest start-of-week-test
+  (t/with-instrument `tick/start-of-week
+    (t/is-spec-check tick/start-of-week))
+  (t/with-instrument :all
+    ;; 2020-01-01 is Wednesday, week starts on Sunday 2019-12-29
+    (t/is= (tick/breakdown->date {::tick/day-of-month 29 ::tick/month 12 ::tick/year 2019})
+      (tick/start-of-week tick/date-2020))
+    ;; Sunday should return itself
+    (let [sunday (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})]
+      (t/is= sunday (tick/start-of-week sunday)))
+    ;; Saturday should return the previous Sunday
+    (let [saturday (tick/breakdown->date {::tick/day-of-month 4 ::tick/month 1 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 29 ::tick/month 12 ::tick/year 2019})
+        (tick/start-of-week saturday)))))
+
+(t/deftest end-of-week-test
+  (t/with-instrument `tick/end-of-week
+    (t/is-spec-check tick/end-of-week))
+  (t/with-instrument :all
+    ;; 2020-01-01 is Wednesday, week ends on Sunday 2020-01-05
+    (t/is= (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})
+      (tick/end-of-week tick/date-2020))
+    ;; Sunday should return next Sunday
+    (let [sunday (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 12 ::tick/month 1 ::tick/year 2020})
+        (tick/end-of-week sunday)))
+    ;; Saturday should return next Sunday
+    (let [saturday (tick/breakdown->date {::tick/day-of-month 4 ::tick/month 1 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})
+        (tick/end-of-week saturday)))))
+
+(t/deftest start-of-quarter-test
+  (t/with-instrument `tick/start-of-quarter
+    (t/is-spec-check tick/start-of-quarter))
+  (t/with-instrument :all
+    ;; Q1: Jan 1
+    (t/is= tick/date-2020 (tick/start-of-quarter tick/date-2020))
+    ;; Q2: Apr 1
+    (let [may-15 (tick/breakdown->date {::tick/day-of-month 15 ::tick/month 5 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 4 ::tick/year 2020})
+        (tick/start-of-quarter may-15)))
+    ;; Q3: Jul 1
+    (let [aug-20 (tick/breakdown->date {::tick/day-of-month 20 ::tick/month 8 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 7 ::tick/year 2020})
+        (tick/start-of-quarter aug-20)))
+    ;; Q4: Oct 1
+    (let [dec-31 (tick/breakdown->date {::tick/day-of-month 31 ::tick/month 12 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 10 ::tick/year 2020})
+        (tick/start-of-quarter dec-31)))))
+
+(t/deftest end-of-quarter-test
+  (t/with-instrument `tick/end-of-quarter
+    (t/is-spec-check tick/end-of-quarter))
+  (t/with-instrument :all
+    ;; Q1 ends Apr 1
+    (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 4 ::tick/year 2020})
+      (tick/end-of-quarter tick/date-2020))
+    ;; Q2 ends Jul 1
+    (let [may-15 (tick/breakdown->date {::tick/day-of-month 15 ::tick/month 5 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 7 ::tick/year 2020})
+        (tick/end-of-quarter may-15)))
+    ;; Q3 ends Oct 1
+    (let [aug-20 (tick/breakdown->date {::tick/day-of-month 20 ::tick/month 8 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 10 ::tick/year 2020})
+        (tick/end-of-quarter aug-20)))
+    ;; Q4 ends Jan 1 of next year
+    (let [dec-31 (tick/breakdown->date {::tick/day-of-month 31 ::tick/month 12 ::tick/year 2020})]
+      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 1 ::tick/year 2021})
+        (tick/end-of-quarter dec-31)))))
+
 (t/deftest ticks-in-month-test
   (t/with-instrument `tick/ticks-in-month
     (t/is-spec-check tick/ticks-in-month))
@@ -406,7 +514,7 @@
     (t/is= 2965248000000000
       (tick/ticks-in-month (+ tick/date-2020 (* 3 tick/ticks-per-average-month))))))
 
-;;;DATE INTERVALS
+;;;DATE RANGE
 (t/deftest months-difference-test
   (t/with-instrument `tick/months-difference
     (t/is-spec-check tick/months-difference))
@@ -509,6 +617,16 @@
     (t/is= 8.16660631615668E-6 (tick/ticks->average-years 294823904829))
     (t/is= -6.852542892382862E-11 (tick/ticks->average-years -2473847))))
 
+(t/deftest average-years->ticks-test
+  (t/with-instrument `tick/average-years->ticks
+    (t/is-spec-check tick/average-years->ticks))
+  (t/with-instrument :all
+    (t/is= 0 (tick/average-years->ticks 0.0))
+    (t/is= tick/ticks-per-average-year (tick/average-years->ticks 1.0))
+    ;; round-trip test
+    (t/is= 1.0 (tick/ticks->average-years (tick/average-years->ticks 1.0)))
+    (t/is= 2.5 (tick/ticks->average-years (tick/average-years->ticks 2.5)))))
+
 (t/deftest date-range->average-years-test
   (t/with-instrument `tick/date-range->average-years
     (t/is-spec-check tick/date-range->average-years))
@@ -561,88 +679,7 @@
     (t/is (tick/same-day? [tick/date-2020 tick/date-2020]))
     (t/is-not (tick/same-day? [tick/date-2070 tick/date-2020]))))
 
-;;;NEW FUNCTIONS
-(t/deftest average-years->ticks-test
-  (t/with-instrument `tick/average-years->ticks
-    (t/is-spec-check tick/average-years->ticks))
-  (t/with-instrument :all
-    (t/is= 0 (tick/average-years->ticks 0.0))
-    (t/is= tick/ticks-per-average-year (tick/average-years->ticks 1.0))
-    ;; round-trip test
-    (t/is= 1.0 (tick/ticks->average-years (tick/average-years->ticks 1.0)))
-    (t/is= 2.5 (tick/ticks->average-years (tick/average-years->ticks 2.5)))))
-
-(t/deftest start-of-week-test
-  (t/with-instrument `tick/start-of-week
-    (t/is-spec-check tick/start-of-week))
-  (t/with-instrument :all
-    ;; 2020-01-01 is Wednesday, week starts on Sunday 2019-12-29
-    (t/is= (tick/breakdown->date {::tick/day-of-month 29 ::tick/month 12 ::tick/year 2019})
-      (tick/start-of-week tick/date-2020))
-    ;; Sunday should return itself
-    (let [sunday (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})]
-      (t/is= sunday (tick/start-of-week sunday)))
-    ;; Saturday should return the previous Sunday
-    (let [saturday (tick/breakdown->date {::tick/day-of-month 4 ::tick/month 1 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 29 ::tick/month 12 ::tick/year 2019})
-        (tick/start-of-week saturday)))))
-
-(t/deftest end-of-week-test
-  (t/with-instrument `tick/end-of-week
-    (t/is-spec-check tick/end-of-week))
-  (t/with-instrument :all
-    ;; 2020-01-01 is Wednesday, week ends on Sunday 2020-01-05
-    (t/is= (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})
-      (tick/end-of-week tick/date-2020))
-    ;; Sunday should return next Sunday
-    (let [sunday (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 12 ::tick/month 1 ::tick/year 2020})
-        (tick/end-of-week sunday)))
-    ;; Saturday should return next Sunday
-    (let [saturday (tick/breakdown->date {::tick/day-of-month 4 ::tick/month 1 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 5 ::tick/month 1 ::tick/year 2020})
-        (tick/end-of-week saturday)))))
-
-(t/deftest start-of-quarter-test
-  (t/with-instrument `tick/start-of-quarter
-    (t/is-spec-check tick/start-of-quarter))
-  (t/with-instrument :all
-    ;; Q1: Jan 1
-    (t/is= tick/date-2020 (tick/start-of-quarter tick/date-2020))
-    ;; Q2: Apr 1
-    (let [may-15 (tick/breakdown->date {::tick/day-of-month 15 ::tick/month 5 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 4 ::tick/year 2020})
-        (tick/start-of-quarter may-15)))
-    ;; Q3: Jul 1
-    (let [aug-20 (tick/breakdown->date {::tick/day-of-month 20 ::tick/month 8 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 7 ::tick/year 2020})
-        (tick/start-of-quarter aug-20)))
-    ;; Q4: Oct 1
-    (let [dec-31 (tick/breakdown->date {::tick/day-of-month 31 ::tick/month 12 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 10 ::tick/year 2020})
-        (tick/start-of-quarter dec-31)))))
-
-(t/deftest end-of-quarter-test
-  (t/with-instrument `tick/end-of-quarter
-    (t/is-spec-check tick/end-of-quarter))
-  (t/with-instrument :all
-    ;; Q1 ends Apr 1
-    (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 4 ::tick/year 2020})
-      (tick/end-of-quarter tick/date-2020))
-    ;; Q2 ends Jul 1
-    (let [may-15 (tick/breakdown->date {::tick/day-of-month 15 ::tick/month 5 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 7 ::tick/year 2020})
-        (tick/end-of-quarter may-15)))
-    ;; Q3 ends Oct 1
-    (let [aug-20 (tick/breakdown->date {::tick/day-of-month 20 ::tick/month 8 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 10 ::tick/year 2020})
-        (tick/end-of-quarter aug-20)))
-    ;; Q4 ends Jan 1 of next year
-    (let [dec-31 (tick/breakdown->date {::tick/day-of-month 31 ::tick/month 12 ::tick/year 2020})]
-      (t/is= (tick/breakdown->date {::tick/day-of-month 1 ::tick/month 1 ::tick/year 2021})
-        (tick/end-of-quarter dec-31)))))
-
-;;;BUSINESS DAYS
+;;;HOLIDAY CALENDAR & BUSINESS DAYS
 (t/deftest business-day?-test
   (t/with-instrument `tick/business-day?
     (t/is-spec-check tick/business-day?))
@@ -786,7 +823,7 @@
           dates (tick/date-seq tick/date-2020 {:end-date end})]
       (t/is= 5 (count dates)))
     ;; Step amount
-    (let [dates (take 3 (tick/date-seq tick/date-2020 {:step-unit :day :step-amount 2}))]
+    (let [dates (take 3 (tick/date-seq tick/date-2020 {:step-amount 2, :step-unit :day}))]
       (t/is= [tick/date-2020
               (+ tick/date-2020 (* 2 tick/ticks-per-day))
               (+ tick/date-2020 (* 4 tick/ticks-per-day))]

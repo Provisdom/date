@@ -11,8 +11,10 @@
   - DST transitions create ambiguous or invalid local times
 
   DST Edge Case Handling:
-  - Spring-forward (gap): Use `::gap-resolution` option - `:pre-gap`, `:post-gap` (default), or `:error`
-  - Fall-back (overlap): Use `::dst-resolution` option - `:earlier` (default), `:later`, or `:error`
+  - Spring-forward (gap): Use `::gap-resolution` option
+    Values: `:pre-gap`, `:post-gap` (default), or `:error`
+  - Fall-back (overlap): Use `::dst-resolution` option
+    Values: `:earlier` (default), `:later`, or `:error`
 
   Common Patterns:
     ;; Convert UTC date to local breakdown
@@ -65,15 +67,15 @@
     ::tick/core-date-breakdown
     #(gen/fmap
        (fn [[year month day hours minutes seconds ms us ticks]]
-         {::tick/year         year
-          ::tick/month        month
-          ::tick/day-of-month (min day (instant/days-in-month [year month]))
+         {::tick/day-of-month (min day (instant/days-in-month [year month]))
           ::tick/hours        hours
           ::tick/minutes      minutes
-          ::tick/seconds      seconds
+          ::tick/month        month
           ::tick/ms           ms
+          ::tick/seconds      seconds
+          ::tick/ticks        ticks
           ::tick/us           us
-          ::tick/ticks        ticks})
+          ::tick/year         year})
        (gen/tuple
          (gen/choose 1850 2300)     ; safe year range within tick bounds
          (gen/choose 1 12)          ; month
@@ -138,9 +140,9 @@
         us (quot (mod nanos 1000000) 1000)
         sub-us-nanos (mod nanos 1000)
         ticks (long (* sub-us-nanos 1.144))
-        base {::tick/year         (.getYear zdt)
+        base {::tick/day-of-month (.getDayOfMonth zdt)
               ::tick/month        (.getMonthValue zdt)
-              ::tick/day-of-month (.getDayOfMonth zdt)}]
+              ::tick/year         (.getYear zdt)}]
     (cond-> base
       want-hours? (assoc ::tick/hours (.getHour zdt))
       want-minutes? (assoc ::tick/minutes (.getMinute zdt))
@@ -301,10 +303,10 @@
             offset-before (.getOffsetBefore ^ZoneOffsetTransition transition)
             offset-after (.getOffsetAfter ^ZoneOffsetTransition transition)
             is-gap (.isGap ^ZoneOffsetTransition transition)]
-        {::transition-date (java-instant->tick-date transition-instant)
-         ::transition-type (if is-gap :gap :overlap)
+        {::offset-after    (zone-offset->offset-map offset-after)
          ::offset-before   (zone-offset->offset-map offset-before)
-         ::offset-after    (zone-offset->offset-map offset-after)}))))
+         ::transition-date (java-instant->tick-date transition-instant)
+         ::transition-type (if is-gap :gap :overlap)}))))
 
 (s/fdef next-dst-transition
   :args (s/cat :zone-id ::zone-id
@@ -338,8 +340,10 @@
   "Converts a local time `local-breakdown` in `zone-id` to a UTC tick date.
 
   Options map:
-  - `::dst-resolution` - for ambiguous times (fall-back): `:earlier` (default), `:later`, or `:error`
-  - `::gap-resolution` - for invalid times (spring-forward): `:pre-gap`, `:post-gap` (default), or `:error`
+  - `::dst-resolution` - for ambiguous times (fall-back)
+    Values: `:earlier` (default), `:later`, or `:error`
+  - `::gap-resolution` - for invalid times (spring-forward)
+    Values: `:pre-gap`, `:post-gap` (default), or `:error`
 
   Returns an anomaly if:
   - The local time is ambiguous and `::dst-resolution` is `:error`
@@ -480,15 +484,15 @@
              (if (or (nil? year) (nil? month) (nil? day-of-month)
                    (nil? hours) (nil? minutes))
                anomaly
-               (let [breakdown {::tick/year         year
-                                ::tick/month        month
-                                ::tick/day-of-month day-of-month
+               (let [breakdown {::tick/day-of-month day-of-month
                                 ::tick/hours        hours
                                 ::tick/minutes      minutes
-                                ::tick/seconds      seconds-whole
+                                ::tick/month        month
                                 ::tick/ms           ms
+                                ::tick/seconds      seconds-whole
+                                ::tick/ticks        ticks
                                 ::tick/us           us
-                                ::tick/ticks        ticks}]
+                                ::tick/year         year}]
                  (local-breakdown->date zone-id breakdown opts))))))
        (catch Exception _
          anomaly)))))
@@ -552,9 +556,9 @@
         {::tick/keys [year month day-of-month]} breakdown
         next-day (if (= day-of-month (instant/days-in-month [year month]))
                    (if (= month 12)
-                     {::tick/year (inc year) ::tick/month 1 ::tick/day-of-month 1}
-                     {::tick/year year ::tick/month (inc month) ::tick/day-of-month 1})
-                   {::tick/year year ::tick/month month ::tick/day-of-month (inc day-of-month)})
+                     {::tick/day-of-month 1 ::tick/month 1 ::tick/year (inc year)}
+                     {::tick/day-of-month 1 ::tick/month (inc month) ::tick/year year})
+                   {::tick/day-of-month (inc day-of-month) ::tick/month month ::tick/year year})
         midnight (assoc next-day
                    ::tick/hours 0
                    ::tick/minutes 0
@@ -573,7 +577,8 @@
 (defn local-day-of-week
   "Returns the day of week for `date` as seen in `zone-id`.
 
-  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`, `:sunday`.
+  Returns one of: `:monday`, `:tuesday`, `:wednesday`, `:thursday`, `:friday`, `:saturday`,
+  `:sunday`.
 
   Example:
     (local-day-of-week \"America/New_York\" tick/date-2020)

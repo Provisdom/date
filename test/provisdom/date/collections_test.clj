@@ -1,5 +1,6 @@
 (ns provisdom.date.collections-test
   (:require
+    [clojure.spec.alpha :as s]
     [provisdom.date.collections :as coll]
     [provisdom.date.tick :as tick]
     [provisdom.test.core :as t]))
@@ -10,7 +11,7 @@
 
 ;;No need for spec-checking DATE SET and DATE MAP functions since they are thin wrappers
 
-;;;DATE MAP
+;;;PREDICATES (must be defined before specs that use them)
 (t/deftest date-map?-test
   (t/with-instrument :all
     (t/is (coll/date-map? (coll/date-map)))
@@ -19,6 +20,24 @@
     (t/is-not (coll/date-map? nil))
     (t/is-not (coll/date-map? []))))
 
+(t/deftest date-set?-test
+  (t/with-instrument :all
+    (t/is (coll/date-set? (coll/date-set)))
+    (t/is (coll/date-set? (coll/date-set [tick/date-2020])))
+    (t/is (coll/date-set? (coll/dense-date-set)))
+    (t/is-not (coll/date-set? #{}))
+    (t/is-not (coll/date-set? nil))
+    (t/is-not (coll/date-set? []))))
+
+;;;SPECS
+(s/def ::test-date-map-of (coll/date-map-of int?))
+
+(t/deftest date-map-of-test
+  ;; No spec-check for macros
+  (t/is (s/valid? ::test-date-map-of (coll/date-map tick/date-2020 42)))
+  (t/is-not (s/valid? ::test-date-map-of {tick/date-2020 42})))
+
+;;;DATE MAP
 (t/deftest date-map-test
   (t/with-instrument :all
     ;; empty constructor
@@ -119,15 +138,6 @@
       (t/is= 18 (get result tick/date-2020)))))
 
 ;;;DATE SET
-(t/deftest date-set?-test
-  (t/with-instrument :all
-    (t/is (coll/date-set? (coll/date-set)))
-    (t/is (coll/date-set? (coll/date-set [tick/date-2020])))
-    (t/is (coll/date-set? (coll/dense-date-set)))
-    (t/is-not (coll/date-set? #{}))
-    (t/is-not (coll/date-set? nil))
-    (t/is-not (coll/date-set? []))))
-
 (t/deftest date-set-test
   (t/with-instrument :all
     ;; empty constructor

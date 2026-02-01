@@ -81,23 +81,23 @@
 
 (def ^:const day-of-week->name
   "Maps day-of-week keywords to full names."
-  {:monday    "Monday"
-   :tuesday   "Tuesday"
-   :wednesday "Wednesday"
-   :thursday  "Thursday"
-   :friday    "Friday"
+  {:friday    "Friday"
+   :monday    "Monday"
    :saturday  "Saturday"
-   :sunday    "Sunday"})
+   :sunday    "Sunday"
+   :thursday  "Thursday"
+   :tuesday   "Tuesday"
+   :wednesday "Wednesday"})
 
 (def ^:const day-of-week->abbreviation
   "Maps day-of-week keywords to abbreviations."
-  {:monday    "Mon"
-   :tuesday   "Tue"
-   :wednesday "Wed"
-   :thursday  "Thu"
-   :friday    "Fri"
+  {:friday    "Fri"
+   :monday    "Mon"
    :saturday  "Sat"
-   :sunday    "Sun"})
+   :sunday    "Sun"
+   :thursday  "Thu"
+   :tuesday   "Tue"
+   :wednesday "Wed"})
 
 (def ^:const months->name
   "Month names indexed by month number (0-based).

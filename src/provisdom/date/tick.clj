@@ -171,7 +171,7 @@
 (s/def ::date ::m/long)
 ;;ticks from epoch
 (s/def ::date-as-double
-  (s/double-in {:infinite? false :NaN? false :min m/min-long :max m/max-long}))
+  (m/finite-spec {:max m/max-long :min m/min-long}))
 
 (s/def ::year (s/int-in 1814 2326))
 (s/def ::month (s/int-in 1 13))
@@ -205,16 +205,16 @@
 
 (defn date-spec
   "Creates a spec for dates within a specific range.
-  
+
   Example:
     (date-spec {:date-min date-2020 :date-max date-2070})"
-  [{:keys [date-min date-max]}]
-  (m/long-spec {:min date-min :max date-max}))
+  [{:keys [date-max date-min]}]
+  (m/long-spec {:max date-max :min date-min}))
 
 (defn ticks-spec
   "Creates a spec for ticks within a specific range."
-  [{:keys [ticks-min ticks-max]}]
-  (m/long-spec {:min ticks-min :max ticks-max}))
+  [{:keys [ticks-max ticks-min]}]
+  (m/long-spec {:max ticks-max :min ticks-min}))
 
 (defn ticks-non--spec
   "Creates a spec for non-negative ticks up to `ticks-max`."
@@ -421,8 +421,8 @@
 (defn- parse-time
   [time-string]
   (let [anomaly {::anomalies/category ::anomalies/exception
-                 ::anomalies/message  "bad time-string"
-                 ::anomalies/fn       (var parse-time)}]
+                 ::anomalies/fn       (var parse-time)
+                 ::anomalies/message  "bad time-string"}]
     (condp = (count (filter (fn [c]
                               (= (str c) ":"))
                       time-string))
@@ -476,14 +476,14 @@
 
 ;;;TICKS
 (def lookup-of-ticks-per
-  {::weeks   ticks-per-week
-   ::days    ticks-per-day
+  {::days    ticks-per-day
    ::hours   ticks-per-hour
    ::minutes ticks-per-minute
-   ::seconds ticks-per-second
    ::ms      ticks-per-ms
+   ::seconds ticks-per-second
+   ::ticks   1
    ::us      ticks-per-us
-   ::ticks   1})
+   ::weeks   ticks-per-week})
 
 (defn ticks->breakdown
   "Breaks down `ticks` into time units.
@@ -541,8 +541,8 @@
     (if (intervals/in-interval? [m/min-long m/max-long] t)
       (long t)
       {::anomalies/category ::anomalies/exception
-       ::anomalies/message  (str "ticks out of long range: " t)
-       ::anomalies/fn       (var breakdown->ticks)})))
+       ::anomalies/fn       (var breakdown->ticks)
+       ::anomalies/message  (str "ticks out of long range: " t)})))
 
 (s/fdef breakdown->ticks
   :args (s/cat :ticks-breakdown ::ticks-breakdown)
@@ -593,9 +593,9 @@
         ""))
     ;; Format as detailed time components
     (let [f2 (partial format "%02d")
-          {::keys [weeks days hours minutes seconds]
-           :or    {weeks 0, days 0, hours 0, minutes 0, seconds 0}
-           :as    breakdown} (ticks->breakdown ticks)
+          {:as    breakdown
+           ::keys [days hours minutes seconds weeks]
+           :or    {days 0, hours 0, minutes 0, seconds 0, weeks 0}} (ticks->breakdown ticks)
           ticks (breakdown->ticks
                   (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
           seconds-fraction (double (/ ticks ticks-per-second))
@@ -646,8 +646,8 @@
   [ticks-string]
   (let [s ticks-string
         anomaly {::anomalies/category ::anomalies/exception
-                 ::anomalies/message  "bad ticks-string"
-                 ::anomalies/fn       (var parse-ticks)}]
+                 ::anomalies/fn       (var parse-ticks)
+                 ::anomalies/message  "bad ticks-string"}]
     ;; Check if this is average years format
     (if (str/ends-with? s "ay")
       ;; Parse average years format
@@ -685,12 +685,12 @@
         (if (or not-all-longs? (and seconds-match (not (number? seconds-decimal))))
           anomaly
           (breakdown->ticks
-            {::weeks   weeks
-             ::days    days
+            {::days    days
              ::hours   hours
              ::minutes minutes
              ::seconds seconds-whole
-             ::ticks   fractional-ticks}))))))
+             ::ticks   fractional-ticks
+             ::weeks   weeks}))))))
 
 (s/fdef parse-ticks
   :args (s/cat :ticks-string string?)
@@ -706,8 +706,8 @@
     ; => {::years 1 ::months 3}"
   [months]
   (let [[years months] (m/quot-and-rem' months 12)]
-    {::years  years
-     ::months months}))
+    {::months months
+     ::years  years}))
 
 (s/fdef months->breakdown
   :args (s/cat :months ::months)
@@ -723,8 +723,8 @@
     (if (intervals/in-interval? [m/min-long m/max-long] m)
       (long m)
       {::anomalies/category ::anomalies/exception
-       ::anomalies/message  (str "months out of long range: " m)
-       ::anomalies/fn       (var breakdown->months)})))
+       ::anomalies/fn       (var breakdown->months)
+       ::anomalies/message  (str "months out of long range: " m)})))
 
 (s/fdef breakdown->months
   :args (s/cat :months-breakdown ::months-breakdown)
@@ -777,9 +777,9 @@
                               [day month year]))
          ticks-bd (ticks->breakdown ticks
                     (set/difference date-form #{::year ::month ::day-of-month ::weeks ::days}))]
-     (merge {::year         year
+     (merge {::day-of-month day
              ::month        month
-             ::day-of-month day}
+             ::year         year}
        ticks-bd))))
 
 (s/fdef date->breakdown
@@ -857,9 +857,9 @@
        (f2 seconds) "." (f3 ms) "." (f3 us) ":" ticks)))
   ([date seconds-fraction-precision]
    (let [f2 (partial format "%02d")
-         {::keys [year month day-of-month hours minutes seconds]
-          :or    {hours 0, minutes 0, seconds 0}
-          :as    breakdown} (date->breakdown date)
+         {:as    breakdown
+          ::keys [day-of-month hours minutes month seconds year]
+          :or    {hours 0, minutes 0, seconds 0}} (date->breakdown date)
          ticks (breakdown->ticks (dissoc breakdown ::weeks ::days ::hours ::minutes ::seconds))
          seconds-fraction (double (/ ticks ticks-per-second))]
      (str (f2 year) "-" (f2 month) "-" (f2 day-of-month) "T" (f2 hours) ":" (f2 minutes) ":"
@@ -884,16 +884,16 @@
   (let [s (str/split date-string #"-|T")
         [s1 s2 s3 s4] s
         anomaly {::anomalies/category ::anomalies/exception
-                 ::anomalies/message  "bad date-string"
-                 ::anomalies/fn       (var parse-date)}
+                 ::anomalies/fn       (var parse-date)
+                 ::anomalies/message  "bad date-string"}
         year (read-number s1 anomaly 2170)
         month (read-number s2 anomaly 1)
         day-of-month (read-number s3 anomaly 0)
         ticks (when s4 (parse-time s4))
-        bd {::year         year
+        bd {::day-of-month day-of-month
             ::month        month
-            ::day-of-month day-of-month
-            ::ticks        ticks}]
+            ::ticks        ticks
+            ::year         year}]
     (if (date-breakdown? bd)
       (breakdown->date bd)
       anomaly)))
@@ -911,8 +911,8 @@
     (add-months-to-date date-2020 3)  ; 3 months later
     (add-months-to-date date-2020 -6) ; 6 months earlier"
   [date months]
-  (let [{::keys [year month]
-         :as    date-breakdown} (date->breakdown date #{})
+  (let [{:as    date-breakdown
+         ::keys [month year]} (date->breakdown date #{})
         [years months] (m/quot-and-mod' (dec (+ months month)) 12)
         year (+ year years)
         month (inc months)
@@ -921,8 +921,8 @@
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
       {::anomalies/category ::anomalies/exception
-       ::anomalies/message  "bad date"
-       ::anomalies/fn       (var add-months-to-date)})))
+       ::anomalies/fn       (var add-months-to-date)
+       ::anomalies/message  "bad date"})))
 
 (s/fdef add-months-to-date
   :args (s/cat :date ::date
@@ -956,9 +956,9 @@
                          ::day-of-month 1)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
-      {::anomalies/fn       (var start-of-year)
-       ::anomalies/message  "not a valid date"
-       ::anomalies/category ::anomalies/exception})))
+      {::anomalies/category ::anomalies/exception
+       ::anomalies/fn       (var start-of-year)
+       ::anomalies/message  "not a valid date"})))
 
 (s/fdef start-of-year
   :args (s/cat :date ::date)
@@ -979,9 +979,9 @@
                          inc)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
-      {::anomalies/fn       (var end-of-year)
-       ::anomalies/message  "not a valid date"
-       ::anomalies/category ::anomalies/exception})))
+      {::anomalies/category ::anomalies/exception
+       ::anomalies/fn       (var end-of-year)
+       ::anomalies/message  "not a valid date"})))
 
 (s/fdef end-of-year
   :args (s/cat :date ::date)
@@ -997,9 +997,9 @@
   (let [date-breakdown (assoc (dissoc (date->breakdown date #{}) ::ticks) ::day-of-month 1)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
-      {::anomalies/fn       (var start-of-month)
-       ::anomalies/message  "not a valid date"
-       ::anomalies/category ::anomalies/exception})))
+      {::anomalies/category ::anomalies/exception
+       ::anomalies/fn       (var start-of-month)
+       ::anomalies/message  "not a valid date"})))
 
 (s/fdef start-of-month
   :args (s/cat :date ::date)
@@ -1008,12 +1008,12 @@
 
 (defn end-of-month
   "Returns the first moment of the next month after `date`.
-  
+
   Example:
     (end-of-month some-date-in-march) ; => 2020-04-01T00:00:00"
   [date]
-  (let [{::keys [year month]
-         :as    date-breakdown} (date->breakdown date #{})
+  (let [{:as    date-breakdown
+         ::keys [month year]} (date->breakdown date #{})
         [year month] (if (= month 12)
                        [(inc year) 1]
                        [year (inc month)])
@@ -1023,9 +1023,9 @@
                          ::day-of-month 1)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
-      {::anomalies/fn       (var end-of-month)
-       ::anomalies/message  "not a valid date"
-       ::anomalies/category ::anomalies/exception})))
+      {::anomalies/category ::anomalies/exception
+       ::anomalies/fn       (var end-of-month)
+       ::anomalies/message  "not a valid date"})))
 
 (s/fdef end-of-month
   :args (s/cat :date ::date)
@@ -1041,9 +1041,9 @@
   (let [bd (dissoc (date->breakdown date #{}) ::ticks)]
     (if (date-breakdown? bd)
       (breakdown->date bd)
-      {::anomalies/fn       (var start-of-day)
-       ::anomalies/message  "not a valid date"
-       ::anomalies/category ::anomalies/exception})))
+      {::anomalies/category ::anomalies/exception
+       ::anomalies/fn       (var start-of-day)
+       ::anomalies/message  "not a valid date"})))
 
 (s/fdef start-of-day
   :args (s/cat :date ::date)
@@ -1056,8 +1056,8 @@
   Example:
     (end-of-day some-datetime) ; => next day at 00:00:00"
   [date]
-  (let [{::keys [year month day-of-month]
-         :as    date-breakdown} (date->breakdown date #{})
+  (let [{:as    date-breakdown
+         ::keys [day-of-month month year]} (date->breakdown date #{})
         [month day-of-month] (if (= day-of-month (instant/days-in-month [year month]))
                                [(inc month) 1]
                                [month (inc day-of-month)])
@@ -1070,9 +1070,9 @@
                          ::day-of-month day-of-month)]
     (if (date-breakdown? date-breakdown)
       (breakdown->date date-breakdown)
-      {::anomalies/fn       (var end-of-day)
-       ::anomalies/message  "not a valid date"
-       ::anomalies/category ::anomalies/exception})))
+      {::anomalies/category ::anomalies/exception
+       ::anomalies/fn       (var end-of-day)
+       ::anomalies/message  "not a valid date"})))
 
 (s/fdef end-of-day
   :args (s/cat :date ::date)
@@ -1112,9 +1112,9 @@
   [date]
   (let [{::keys [year month]} (date->breakdown date #{})
         quarter-start-month (inc (* 3 (quot (dec month) 3)))]
-    (breakdown->date {::year         year
+    (breakdown->date {::day-of-month 1
                       ::month        quarter-start-month
-                      ::day-of-month 1})))
+                      ::year         year})))
 
 (s/fdef start-of-quarter
   :args (s/cat :date ::date)
@@ -1131,9 +1131,9 @@
         [year month] (if (> next-quarter-month 12)
                        [(inc year) 1]
                        [year next-quarter-month])]
-    (breakdown->date {::year         year
+    (breakdown->date {::day-of-month 1
                       ::month        month
-                      ::day-of-month 1})))
+                      ::year         year})))
 
 (s/fdef end-of-quarter
   :args (s/cat :date ::date)
@@ -1337,8 +1337,8 @@
   [duration-string]
   (let [s duration-string
         anomaly {::anomalies/category ::anomalies/exception
-                 ::anomalies/message  "bad duration-string"
-                 ::anomalies/fn       (var parse-duration)}
+                 ::anomalies/fn       (var parse-duration)
+                 ::anomalies/message  "bad duration-string"}
         ;; Parse years and months (handle negative values)
         years (if-let [match (re-find #"(-?\d+)y" s)]
                 (let [parsed (read-number (second match) anomaly 0)]
@@ -1628,9 +1628,9 @@
          fy-year (if (>= month fiscal-year-start-month)
                    year
                    (dec year))]
-     (breakdown->date {::year         fy-year
+     (breakdown->date {::day-of-month 1
                        ::month        fiscal-year-start-month
-                       ::day-of-month 1}))))
+                       ::year         fy-year}))))
 
 (s/fdef start-of-fiscal-year
   :args (s/cat :date ::date
@@ -1652,9 +1652,9 @@
          fy-year (if (>= month fiscal-year-start-month)
                    (inc year)
                    year)]
-     (breakdown->date {::year         fy-year
+     (breakdown->date {::day-of-month 1
                        ::month        fiscal-year-start-month
-                       ::day-of-month 1}))))
+                       ::year         fy-year}))))
 
 (s/fdef end-of-fiscal-year
   :args (s/cat :date ::date
@@ -1723,13 +1723,13 @@
                                               :year (* step-amount ticks-per-average-year))
                                  end-date (+' start-date (* num-steps step-ticks))]
                              (if (intervals/in-interval? [m/min-long m/max-long] end-date)
-                               (gen/return [start-date {:step-unit   step-unit
+                               (gen/return [start-date {:end-date    (long end-date)
                                                         :step-amount step-amount
-                                                        :end-date    (long end-date)}])
-                               (gen/return [start-date {:step-unit   :day
-                                                        :step-amount 1
-                                                        :end-date    (+' start-date
-                                                                       (* 10 ticks-per-day))}]))))))))))))
+                                                        :step-unit   step-unit}])
+                               (gen/return
+                                 [start-date {:end-date    (+' start-date (* 10 ticks-per-day))
+                                              :step-amount 1
+                                              :step-unit   :day}]))))))))))))
   :ret (s/coll-of ::date))
 
 ;;;RANGE PREDICATES
@@ -1926,7 +1926,7 @@
   [date]
   (let [thursday (thursday-of-week date)
         {::keys [year]} (date->breakdown thursday #{})
-        jan4 (breakdown->date {::year year ::month 1 ::day-of-month 4})
+        jan4 (breakdown->date {::day-of-month 4 ::month 1 ::year year})
         jan4-thursday (thursday-of-week jan4)
         week1-start (- jan4-thursday (* 3 ticks-per-day))   ; Monday of week 1
         days-since-week1 (quot (- thursday week1-start) ticks-per-day)]
